@@ -6,7 +6,7 @@ import math
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 
-# Shared grey stone material with a little roughness.
+# Shared grey stone material.
 mat = bpy.data.materials.new(name='golem_grey')
 mat.use_nodes = True
 bsdf = mat.node_tree.nodes['Principled BSDF']
@@ -21,41 +21,42 @@ def add_box(name, size, location, rotation=(0, 0, 0)):
     obj.data.materials.append(mat)
     return obj
 
-# Reference direction: the golem faces +Y in Blender; three.js will rotate to +Z.
+# --- Base body (always visible) ---
 # Legs
-add_box('legL',  (0.42, 0.55, 1.1), (-0.32, 0.0, 0.0), (0.05, 0, 0.05))
-add_box('legR',  (0.42, 0.55, 1.1), (0.32, 0.0, 0.0), (-0.05, 0, -0.05))
-# Feet
-add_box('footL', (0.5, 0.75, 0.35), (-0.32, 0.25, -0.45), (0.1, 0, 0))
-add_box('footR', (0.5, 0.75, 0.35), (0.32, 0.25, -0.45), (-0.1, 0, 0))
+add_box('base_legL',  (0.42, 0.55, 1.1), (-0.32, 0.0, 0.0), (0.05, 0, 0.05))
+add_box('base_legR',  (0.42, 0.55, 1.1), (0.32, 0.0, 0.0), (-0.05, 0, -0.05))
+add_box('base_footL', (0.5, 0.75, 0.35), (-0.32, 0.25, -0.45), (0.1, 0, 0))
+add_box('base_footR', (0.5, 0.75, 0.35), (0.32, 0.25, -0.45), (-0.1, 0, 0))
+add_box('base_hips', (0.85, 0.55, 0.45), (0.0, 0.0, 0.2))
 
-# Hips / waist
-add_box('hips', (0.85, 0.55, 0.45), (0.0, 0.0, 0.2))
-
-# Torso: layered chest plates
-add_box('chest',  (0.95, 0.75, 0.65), (0.0, 0.85, 0.0), (0.08, 0, 0))
-add_box('abs',    (0.75, 0.55, 0.55), (0.0, 0.45, 0.05), (0.04, 0, 0))
-
-# Head
-add_box('head', (0.45, 0.55, 0.45), (0.0, 1.55, 0.05), (0.05, 0, 0))
-
-# Shoulders (large angular plates)
-add_box('shoulderL', (0.55, 0.85, 0.55), (-0.72, 1.15, 0.0), (0.0, 0, 0.25))
-add_box('shoulderR', (0.55, 0.85, 0.55), (0.72, 1.15, 0.0), (0.0, 0, -0.25))
+# Torso
+add_box('base_chest',  (0.95, 0.75, 0.65), (0.0, 0.85, 0.0), (0.08, 0, 0))
+add_box('base_abs',    (0.75, 0.55, 0.55), (0.0, 0.45, 0.05), (0.04, 0, 0))
+add_box('base_head', (0.45, 0.55, 0.45), (0.0, 1.55, 0.05), (0.05, 0, 0))
 
 # Arms
-add_box('armL', (0.32, 0.85, 0.35), (-0.78, 0.55, 0.0), (0.15, 0, 0.15))
-add_box('armR', (0.32, 0.85, 0.35), (0.78, 0.55, 0.0), (-0.15, 0, -0.15))
+add_box('base_shoulderL', (0.45, 0.7, 0.5), (-0.72, 1.15, 0.0), (0.0, 0, 0.25))
+add_box('base_shoulderR', (0.45, 0.7, 0.5), (0.72, 1.15, 0.0), (0.0, 0, -0.25))
+add_box('base_armL', (0.32, 0.85, 0.35), (-0.78, 0.55, 0.0), (0.15, 0, 0.15))
+add_box('base_armR', (0.32, 0.85, 0.35), (0.78, 0.55, 0.0), (-0.15, 0, -0.15))
+add_box('base_gauntletL', (0.4, 0.55, 0.45), (-0.78, 0.05, 0.05), (0.1, 0, 0.1))
+add_box('base_gauntletR', (0.4, 0.55, 0.45), (0.78, 0.05, 0.05), (-0.1, 0, -0.1))
 
-# Gauntlets
-add_box('gauntletL', (0.4, 0.55, 0.45), (-0.78, 0.05, 0.05), (0.1, 0, 0.1))
-add_box('gauntletR', (0.4, 0.55, 0.45), (0.78, 0.05, 0.05), (-0.1, 0, -0.1))
+# --- Fire variant: horns and flame-shaped shoulder crests ---
+add_box('fire_hornL', (0.1, 0.35, 0.12), (-0.14, 1.8, 0.0), (0.25, 0, -0.2))
+add_box('fire_hornR', (0.1, 0.35, 0.12), (0.14, 1.8, 0.0), (-0.25, 0, 0.2))
+add_box('fire_crestL', (0.25, 0.7, 0.15), (-0.85, 1.4, 0.0), (0.0, 0, 0.35))
+add_box('fire_crestR', (0.25, 0.7, 0.15), (0.85, 1.4, 0.0), (0.0, 0, -0.35))
 
-# Spikes / crystal shards on shoulders and knees
-add_box('spikeL', (0.18, 0.55, 0.18), (-0.95, 1.25, 0.0), (0.0, 0, 0.6))
-add_box('spikeR', (0.18, 0.55, 0.18), (0.95, 1.25, 0.0), (0.0, 0, -0.6))
-add_box('kneeSpikeL', (0.12, 0.35, 0.12), (-0.35, 0.35, 0.45), (0.5, 0, 0.2))
-add_box('kneeSpikeR', (0.12, 0.35, 0.12), (0.35, 0.35, 0.45), (-0.5, 0, -0.2))
+# --- Water variant: curved fin-like shoulder pieces and crest ---
+add_box('water_finL', (0.15, 0.9, 0.55), (-0.85, 1.2, 0.0), (0.0, 0, 0.55))
+add_box('water_finR', (0.15, 0.9, 0.55), (0.85, 1.2, 0.0), (0.0, 0, -0.55))
+add_box('water_crest', (0.45, 0.2, 0.15), (0.0, 1.85, 0.0), (0.0, 0, 0))
+
+# --- Earth variant: bulky crystal spikes on shoulders and back ---
+add_box('earth_spikeL', (0.25, 0.55, 0.25), (-0.95, 1.25, 0.0), (0.0, 0, 0.6))
+add_box('earth_spikeR', (0.25, 0.55, 0.25), (0.95, 1.25, 0.0), (0.0, 0, -0.6))
+add_box('earth_backSpike', (0.2, 0.5, 0.35), (0.0, 1.05, -0.55), (0.6, 0, 0))
 
 out_path = os.path.join(os.getcwd(), 'assets', 'golem.glb')
 bpy.ops.export_scene.gltf(filepath=out_path, export_format='GLB')

@@ -139,6 +139,20 @@ export function createPlayer(scene) {
   return player;
 }
 
+function updateVariantVisibility(player) {
+  const active = player.element;
+  player.group.traverse((child) => {
+    if (!child.isMesh || !child.name) return;
+    const name = child.name;
+    if (name.startsWith('fire_') || name.startsWith('water_') || name.startsWith('earth_')) {
+      const prefix = name.split('_')[0];
+      child.visible = prefix === active;
+    } else {
+      child.visible = true;
+    }
+  });
+}
+
 export function setElement(player, type) {
   player.element = type;
   const glow = new THREE.Color(elementColors[type] ?? GOLEM_COLOR);
@@ -150,6 +164,7 @@ export function setElement(player, type) {
       child.material.emissiveIntensity = 0.55;
     }
   });
+  updateVariantVisibility(player);
 }
 
 export function getElement(player) {
