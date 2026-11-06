@@ -43,7 +43,7 @@ let projectileGeometry = null; // one shared sphere, made on first shot
 // Try to load the Blender-exported golem model; fall back to procedural boxes if it fails.
 let golemTemplate = null;
 try {
-  golemTemplate = await new GLTFLoader().loadAsync('assets/golem.glb?v=3');
+  golemTemplate = await new GLTFLoader().loadAsync('assets/golem.glb?v=4');
 } catch (err) {
   console.warn('Golem model not loaded, using procedural fallback', err);
 }
