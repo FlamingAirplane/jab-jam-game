@@ -20,7 +20,7 @@ import {
 } from './enemies.js?v=3';
 import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=2';
 import { playHit, playDeath, playAbsorb, resumeAudio, startMusic, toggleMusic, isMusicMuted } from './audio.js?v=3';
-import { buildMap } from './level.js?v=3';
+import { buildMap } from './level.js?v=4';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
@@ -127,14 +127,14 @@ function clearLevel() {
   columnMeshes.length = 0;
 }
 
-function createLevel(scene) {
+function createLevel(scene, floorNumber = 1) {
   clearLevel();
-  const level = buildMap(scene);
+  const level = buildMap(scene, floorNumber);
   walls = level.walls;
   columnMeshes.push(...level.columns);
 }
 
-createLevel(scene);
+createLevel(scene, floor);
 
 // --- Input -------------------------------------------------------------------
 // Keys are held under several spellings ('Space'/'space'/' ', 'KeyW'/'keyw'/'w')
@@ -383,7 +383,7 @@ function restart() {
   waveTimer = spawnInterval;
   shownHp = player.hp;
   setMouseDown(false);
-  createLevel(scene);
+  createLevel(scene, floor);
   spawnWaveCustom(scene, waveSize);
   attachHealthBars();
   spawnElementFields(scene, elementFieldCount);
@@ -613,7 +613,7 @@ function update(dt) {
         waveInFloor = 1;
         screenShake += screenShakeAmount * 2;
         showBanner('Floor Complete', `Descending to floor ${floor}`, 1500);
-        createLevel(scene);
+        createLevel(scene, floor);
         spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
         attachHealthBars();
         clearElementFields();
@@ -658,7 +658,7 @@ renderer.setAnimationLoop(() => {
   }
 });
 
-createLevel(scene);
+createLevel(scene, floor);
 showBanner(`Floor ${floor}`, 'Survive the waves', 3000);
 spawnWaveCustom(scene, waveSize);
 attachHealthBars();
