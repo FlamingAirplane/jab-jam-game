@@ -110,20 +110,21 @@ export function updatePlayer(player, dt, ctx) {
   const keys = ctx.keys;
   const position = player.group.position;
 
-  // Walk: camera-relative, so WASD matches what the player sees on screen.
-  // W = away from camera, S = toward camera, A = left, D = right.
+  // Walk: screen-relative, so WASD matches the screen no matter the camera angle.
+  // W = screen up, S = screen down, A = screen left, D = screen right.
   const cam = ctx.camera;
-  const forward = new THREE.Vector3();
-  cam.getWorldDirection(forward);
-  forward.y = 0;
-  forward.normalize();
-  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
+  const camForward = new THREE.Vector3();
+  cam.getWorldDirection(camForward);
+  // Camera right lies flat on the ground because it's perpendicular to world up.
+  const screenRight = new THREE.Vector3().crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
+  // Screen up is perpendicular to screen right and also flat on the ground.
+  const screenUp = new THREE.Vector3().crossVectors(screenRight, new THREE.Vector3(0, 1, 0)).normalize();
 
   moveStep.set(0, 0, 0);
-  if (held(keys, 'KeyW', 'w')) moveStep.add(forward);
-  if (held(keys, 'KeyS', 's')) moveStep.sub(forward);
-  if (held(keys, 'KeyD', 'd')) moveStep.add(right);
-  if (held(keys, 'KeyA', 'a')) moveStep.sub(right);
+  if (held(keys, 'KeyW', 'w')) moveStep.add(screenUp);
+  if (held(keys, 'KeyS', 's')) moveStep.sub(screenUp);
+  if (held(keys, 'KeyD', 'd')) moveStep.add(screenRight);
+  if (held(keys, 'KeyA', 'a')) moveStep.sub(screenRight);
   if (moveStep.lengthSq() > 0) {
     moveStep.normalize().multiplyScalar(moveSpeed * elementMoveSpeedMul[player.element] * dt);
     position.x = clamp(position.x + moveStep.x, -arenaSize, arenaSize);
