@@ -8,7 +8,10 @@ You have the jam (11:00 AM to 4:00 PM). Decide now what's in, so cutting later i
 
 Example: "One beam, ships that spawn and move, rocks, a ship counter."
 
->
+> One arena floor. WASD moves the golem, mouse aims, click or hold fires one heavy projectile. One
+> enemy type that spawns in waves; each floor's wave is bigger than the last. Three elements you
+> absorb by walking into their fields — you carry one at a time, so taking a new one drops the old.
+> Clear the wave to descend. Title screen, score, game over, restart.
 
 ## Out (not this jam)
 
@@ -16,7 +19,7 @@ Example: "One beam, ships that spawn and move, rocks, a ship counter."
 
 Example: "Weather changes, upgrades, a story."
 
->
+> Saves or accounts. Multiplayer. Menus beyond title and game over.
 
 ## Stretch (only if time is left)
 
@@ -24,4 +27,5 @@ Example: "Weather changes, upgrades, a story."
 
 Example: "Sound of waves; ships that ignore the light."
 
->
+> The other three elements (darkness, light, earth, wind, fire, water — we picked three today).
+> A second enemy type. Skill points and a skill tree. Item drops.

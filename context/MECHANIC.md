@@ -8,7 +8,8 @@ How the game plays. Jam rule: the whole game is built around **one action the pl
 
 Example: "Sweep the beam, spot a ship, hold the light on it until it reaches the harbor."
 
->
+> Aim and fire. The mouse aims; click or hold to shoot. Shots are heavy and weighty — enemies burst
+> when they die, and a big hit shakes the screen.
 
 ## 500 times
 
@@ -16,7 +17,8 @@ Example: "Sweep the beam, spot a ship, hold the light on it until it reaches the
 
 Example: "Yes: the ships come at different speeds and angles, so every sweep is a new timing."
 
->
+> Yes — different enemies each floor, and you're carrying a different element each time, so the same
+> trigger fires something different.
 
 ## The worst 30 seconds
 
@@ -24,7 +26,8 @@ Example: "Yes: the ships come at different speeds and angles, so every sweep is 
 
 Example: "No ships for a while, so you just sweep empty fog."
 
->
+> Nothing to shoot. Or you're carrying an element that's useless against what's in front of you, and
+> you can't swap it in time.
 
 ## Controls
 
@@ -32,7 +35,8 @@ Example: "No ships for a while, so you just sweep empty fog."
 
 Example: "Mouse moves the beam. Click to flash it."
 
->
+> WASD moves the golem. Mouse aims. Click or hold to fire. Walk into an elemental field to absorb
+> that element — you can only hold one at a time, so taking a new one drops the old.
 
 ## Win and lose
 
@@ -40,4 +44,5 @@ Example: "Mouse moves the beam. Click to flash it."
 
 Example: "Lose when three ships hit the rocks. Score is ships saved."
 
->
+> Lose when the golem is destroyed. Score is floors descended. Each floor's wave is bigger than the
+> last.
