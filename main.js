@@ -417,7 +417,12 @@ function absorbFields() {
   for (const field of getElementFields()) {
     if (!alive(field)) continue;
     if (distanceXZ(playerPos, field.mesh.position) < field.radius + playerRadius) {
-      setElement(player, field.type);
+      if (field.type === player.element) {
+        // Matching element: heal instead of swapping.
+        player.hp = Math.min(maxHp(), player.hp + 10);
+      } else {
+        setElement(player, field.type);
+      }
       playAbsorb(field.type);
       field.alive = false;
       if (field.mesh.parent) field.mesh.parent.remove(field.mesh);
