@@ -23,6 +23,7 @@ import {
 } from './tuning.js';
 import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js?v=2';
 import { playShoot } from './audio.js?v=2';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const GOLEM_COLOR = '#c6cbd0';
 const PROJECTILE_COLOR = '#f1f2f4';
@@ -38,6 +39,14 @@ const raycaster = new THREE.Raycaster();
 const hitPoint = new THREE.Vector3();
 const moveStep = new THREE.Vector3();
 let projectileGeometry = null; // one shared sphere, made on first shot
+
+// Try to load the Blender-exported golem model; fall back to procedural boxes if it fails.
+let golemTemplate = null;
+try {
+  golemTemplate = await new GLTFLoader().loadAsync('assets/golem.glb?v=1');
+} catch (err) {
+  console.warn('Golem model not loaded, using procedural fallback', err);
+}
 
 // movement keys are matched on e.code ('KeyW') and on the plain letter, so either convention works
 function held(keys, code, letter) {
@@ -78,34 +87,47 @@ export function createPlayer(scene) {
   clearFX();
 
   const group = new THREE.Group();
-  const material = new THREE.MeshStandardMaterial({ color: GOLEM_COLOR, roughness: 0.8 });
+  let representativeMesh = null;
 
-  // Chunky golem body: a torso and two shoulder blocks.
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.7), material);
-  torso.position.y = 0.75;
-  group.add(torso);
+  if (golemTemplate) {
+    // Use the Blender-exported golem. Clone the scene so future restarts don't share it.
+    const model = golemTemplate.scene.clone();
+    // Blender built the model with +Y as forward; rotate so it faces three.js +Z.
+    model.rotation.y = -Math.PI / 2;
+    group.add(model);
+    group.position.set(0, 0, 0);
+    scene.add(group);
+    representativeMesh = model;
+  } else {
+    // Procedural fallback: a chunky body made of boxes.
+    const material = new THREE.MeshStandardMaterial({ color: GOLEM_COLOR, roughness: 0.8 });
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.7), material);
+    torso.position.y = 0.75;
+    group.add(torso);
+    representativeMesh = torso;
 
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.55), material);
-  head.position.y = 1.55;
-  group.add(head);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.55), material);
+    head.position.y = 1.55;
+    group.add(head);
 
-  const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
-  shoulderL.position.set(-0.62, 1.1, 0);
-  group.add(shoulderL);
+    const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
+    shoulderL.position.set(-0.62, 1.1, 0);
+    group.add(shoulderL);
 
-  const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
-  shoulderR.position.set(0.62, 1.1, 0);
-  group.add(shoulderR);
+    const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
+    shoulderR.position.set(0.62, 1.1, 0);
+    group.add(shoulderR);
 
-  group.position.set(0, 0, 0);
-  scene.add(group);
+    group.position.set(0, 0, 0);
+    scene.add(group);
+  }
 
   shotScene = scene;
   fireTimer = 0;
 
   const player = {
     group,
-    mesh: torso, // one representative mesh for setElement to recolour
+    mesh: representativeMesh, // one representative mesh for setElement to recolour
     hp: playerHP,
     maxHp: playerHP,
     dead: false,
