@@ -2,10 +2,12 @@
 import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
-  enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize,
+  enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
+  cameraHeight, cameraDistance, cameraFollowSpeed, elementFieldCount,
 } from './tuning.js';
-import { createPlayer, updatePlayer, updateProjectiles, getProjectiles } from './player.js';
+import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
 import { spawnWave, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
+import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
 import { createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver } from './ui.js';
 
 // --- Overlay -----------------------------------------------------------------
@@ -15,9 +17,9 @@ const ui = createUI();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#595959');
 
-// Isometric-ish top-down: high above and behind the floor, aimed at its centre.
+// Isometric-ish top-down: high above and behind the floor, aimed at the golem.
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 500);
-camera.position.set(0, arenaSize * 1.7, arenaSize * 1.55);
+camera.position.set(0, cameraHeight, cameraDistance);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -105,15 +107,19 @@ function restart() {
     shot.alive = false;
     if (shot.mesh) scene.remove(shot.mesh);
   }
+  clearElementFields();
   player.hp = maxHp();
   player.dead = false;
   player.group.position.set(0, player.group.position.y, 0);
+  setElement(player, 'fire');
   score = 0;
   floor = 1;
   contactTimer = 0;
-  waveTimer = 0;
+  waveTimer = spawnInterval;
   shownHp = player.hp;
   setMouseDown(false);
+  spawnWave(scene, waveSize);
+  spawnElementFields(scene, elementFieldCount);
   setScore(score);
   setFloor(floor);
   setHealth(player.hp, maxHp());
@@ -122,6 +128,19 @@ function restart() {
 }
 
 ui.setRestartHandler(restart);
+
+// --- Element field absorption ------------------------------------------------
+function absorbFields() {
+  const playerPos = player.group.position;
+  for (const field of getElementFields()) {
+    if (!alive(field)) continue;
+    if (distanceXZ(playerPos, field.mesh.position) < field.radius + playerRadius) {
+      setElement(player, field.type);
+      field.alive = false;
+      if (field.mesh.parent) field.mesh.parent.remove(field.mesh);
+    }
+  }
+}
 
 // --- Collision (ours, not the other builder's) --------------------------------
 function hitEnemies() {
@@ -133,14 +152,22 @@ function hitEnemies() {
       const reach = projectileRadius + (enemy.radius ?? enemyRadius);
       if (distanceXZ(shot.mesh.position, enemy.mesh.position) < reach) {
         enemy.hp -= shot.damage ?? projectileDamage;
-        shot.alive = false;
-        if (shot.mesh) scene.remove(shot.mesh);
+        if (shot.pierce !== undefined) {
+          shot.pierce -= 1;
+          if (shot.pierce <= 0) {
+            shot.alive = false;
+            if (shot.mesh) scene.remove(shot.mesh);
+          }
+        } else {
+          shot.alive = false;
+          if (shot.mesh) scene.remove(shot.mesh);
+        }
         if (enemy.hp <= 0) {
           enemy.alive = false;
           if (enemy.mesh) scene.remove(enemy.mesh);
           score += 1;
         }
-        break;   // this shot is spent
+        break;   // this shot hit one enemy this frame
       }
     }
   }
@@ -159,12 +186,26 @@ function touchDamage(dt) {
   }
 }
 
+// --- Camera follow -----------------------------------------------------------
+const targetCameraPos = new THREE.Vector3();
+const currentCameraPos = camera.position.clone();
+
+function updateCamera(dt) {
+  const p = player.group.position;
+  targetCameraPos.set(p.x, p.y + cameraHeight, p.z + cameraDistance);
+  const t = Math.min(1, cameraFollowSpeed * dt);
+  currentCameraPos.lerp(targetCameraPos, t);
+  camera.position.copy(currentCameraPos);
+  camera.lookAt(p.x, p.y, p.z);
+}
+
 // --- Frame -------------------------------------------------------------------
 function update(dt) {
   updatePlayer(player, dt, ctx);
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
 
+  absorbFields();
   hitEnemies();
   touchDamage(dt);
 
@@ -175,11 +216,14 @@ function update(dt) {
     showGameOver(score, floor);
   }
 
-  // M1 stand-in for wave progression: quiet beat once the floor is clear, then the same size wave.
+  // Floor escalation: quiet beat once the floor is clear, then a bigger wave and fresh fields.
   if (liveEnemies() === 0) {
     waveTimer -= dt;
     if (waveTimer <= 0) {
-      spawnWave(scene, waveSize);
+      floor += 1;
+      spawnWave(scene, waveSize + (floor - 1) * waveGrowth);
+      clearElementFields();
+      spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
       waveTimer = spawnInterval;
     }
   }
@@ -197,9 +241,13 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);   // a tab switch must not teleport the world
   if (state === 'playing') update(dt);
+  updateCamera(dt);
   renderer.render(scene, camera);
 });
 
+spawnWave(scene, waveSize);
+waveTimer = spawnInterval;
+spawnElementFields(scene, elementFieldCount);
 setScore(score);
 setFloor(floor);
 setHealth(player.hp, maxHp());

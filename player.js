@@ -1,4 +1,4 @@
-// The golem: WASD movement on the floor, mouse aim, and firing plain sphere projectiles.
+// The golem: WASD movement on the floor, mouse aim, and firing element-charged shots.
 import * as THREE from 'three';
 import {
   moveSpeed,
@@ -10,6 +10,12 @@ import {
   projectileRange,
   projectileRadius,
   arenaSize,
+  elementColors,
+  fireProjectileSpeed,
+  waterProjectileSpeed,
+  earthProjectileSpeed,
+  earthProjectileScale,
+  waterPierceCount,
 } from './tuning.js';
 
 const GOLEM_COLOR = '#c6cbd0';
@@ -19,7 +25,7 @@ const PROJECTILE_COLOR = '#f1f2f4';
 let activePlayer = null; // whose position new shots start from
 let shotScene = null; // the scene shot meshes are added to
 let fireTimer = 0; // seconds until the next shot is allowed
-const projectiles = []; // [{ mesh, dir, damage, alive, traveled }]
+const projectiles = []; // [{ mesh, dir, damage, alive, traveled, speed, pierce }]
 
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const raycaster = new THREE.Raycaster();
@@ -61,7 +67,8 @@ export function createPlayer(scene) {
   const size = playerRadius * 2;
   const geometry = new THREE.BoxGeometry(size, size, size);
   geometry.translate(0, size / 2, 0); // base sits on the floor, so the group can live at y = 0
-  group.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: GOLEM_COLOR })));
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: GOLEM_COLOR }));
+  group.add(mesh);
   group.position.set(0, 0, 0);
   scene.add(group);
 
@@ -70,13 +77,27 @@ export function createPlayer(scene) {
 
   const player = {
     group,
+    mesh, // the golem box, so setElement can recolour it
     hp: playerHP,
     maxHp: playerHP,
     dead: false,
+    element: 'fire',
     facing: new THREE.Vector3(0, 0, 1), // where the next shot goes
   };
+  setElement(player, 'fire');
   activePlayer = player;
   return player;
+}
+
+export function setElement(player, type) {
+  player.element = type;
+  if (player.mesh && player.mesh.material) {
+    player.mesh.material.color.set(elementColors[type] ?? GOLEM_COLOR);
+  }
+}
+
+export function getElement(player) {
+  return player.element;
 }
 
 export function updatePlayer(player, dt, ctx) {
@@ -126,8 +147,8 @@ export function updateProjectiles(dt) {
     projectiles.splice(i, 1);
   }
 
-  const step = projectileSpeed * dt;
   for (const shot of projectiles) {
+    const step = shot.speed * dt;
     shot.mesh.position.addScaledVector(shot.dir, step);
     shot.traveled += step;
     if (shot.traveled >= projectileRange) shot.alive = false; // cleaned up next frame
@@ -141,10 +162,32 @@ export function getProjectiles() {
 function spawnShot(player) {
   if (!projectileGeometry) projectileGeometry = new THREE.SphereGeometry(projectileRadius, 10, 6);
 
-  const mesh = new THREE.Mesh(
-    projectileGeometry,
-    new THREE.MeshStandardMaterial({ color: PROJECTILE_COLOR })
-  );
+  const element = player.element ?? 'fire';
+  const material = new THREE.MeshStandardMaterial({ color: elementColors[element] ?? PROJECTILE_COLOR });
+
+  let mesh;
+  let speed = projectileSpeed;
+  let damage = projectileDamage;
+  let pierce;
+
+  if (element === 'water') {
+    // Thinner, longer piercing beam.
+    mesh = new THREE.Mesh(projectileGeometry, material);
+    mesh.scale.set(0.5, 0.5, 2.5);
+    speed = waterProjectileSpeed;
+    pierce = waterPierceCount;
+  } else if (element === 'earth') {
+    // Larger, slower, harder-hitting blast.
+    mesh = new THREE.Mesh(projectileGeometry, material);
+    mesh.scale.setScalar(earthProjectileScale);
+    speed = earthProjectileSpeed;
+    damage = projectileDamage * 1.5;
+  } else {
+    // Fire: fast default bolt.
+    mesh = new THREE.Mesh(projectileGeometry, material);
+    speed = fireProjectileSpeed;
+  }
+
   const dir = player.facing.clone();
   mesh.position.copy(player.group.position);
   mesh.position.y = playerRadius; // chest height, clear of the floor
@@ -154,9 +197,11 @@ function spawnShot(player) {
   projectiles.push({
     mesh,
     dir,
-    damage: projectileDamage,
+    damage,
     alive: true,
     traveled: 0,
+    speed,
+    pierce,
   });
 }
 
