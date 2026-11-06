@@ -1,12 +1,16 @@
 <!doctype html>
+<!-- index.html — the page: import map for three.js, full-window canvas, UI overlay, loads main.js. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Jam Game</title>
+  <title>Golem in the Moon Dungeon</title>
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
-    #file-warning { position: fixed; inset: 0; display: grid; place-items: center; padding: 2rem;
+    canvas { display: block; }
+    /* The UI overlay sits above the canvas; only the game over button takes clicks. */
+    #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+    #file-warning { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 2rem;
       color: #fff; background: #111; font: 18px/1.5 system-ui, sans-serif; text-align: center; }
     #file-warning[hidden] { display: none; }
     code { background: #333; padding: 0.1em 0.4em; border-radius: 4px; }
@@ -32,13 +36,7 @@
     // Browsers block game code opened straight from a file. Say so instead of showing a blank page.
     if (location.protocol === 'file:') document.getElementById('file-warning').hidden = false;
   </script>
-  <!-- Starter hint, shown only on your own machine. Delete it once your game has a title screen. -->
-  <div id="start-hint" hidden style="position:fixed;left:0;right:0;bottom:12px;text-align:center;color:#aaa;font:14px/1.4 system-ui,sans-serif;pointer-events:none">
-    New here? Read <code>README.md</code>, then type <code>/jam-start</code> in Claude Code.</div>
-  <script>
-    const hint = document.getElementById('start-hint');
-    if (hint && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) hint.hidden = false;
-  </script>
+  <div id="ui"></div>
   <!-- If three.js (from the internet) or main.js fails to load, say so instead of showing a blank page. -->
   <script type="module" src="./main.js" onerror="if(location.protocol!=='file:'){var w=document.getElementById('file-warning');w.textContent='The game could not load (check your internet), then refresh the page.';w.hidden=false}"></script>
 </body>

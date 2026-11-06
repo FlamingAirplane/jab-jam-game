@@ -1,0 +1,74 @@
+// Enemy boxes: spawn a wave just inside the arena edge, then walk straight at the golem.
+import * as THREE from 'three';
+import { enemySpeed, enemyHP, enemyRadius, arenaSize } from './tuning.js';
+
+const ENEMY_COLOR = '#767c84';
+const enemies = []; // [{ mesh, hp, alive, radius }]
+let enemyGeometry = null; // one shared box, made on the first spawn
+
+// A box twice the enemy radius, its base anchored at y = 0 so a mesh at y = 0 stands on the floor.
+function getEnemyGeometry() {
+  if (!enemyGeometry) {
+    const size = enemyRadius * 2;
+    enemyGeometry = new THREE.BoxGeometry(size, size, size);
+    enemyGeometry.translate(0, size / 2, 0);
+  }
+  return enemyGeometry;
+}
+
+export function spawnWave(scene, count) {
+  const geometry = getEnemyGeometry();
+  for (let i = 0; i < count; i++) {
+    const mesh = new THREE.Mesh(
+      geometry,
+      new THREE.MeshStandardMaterial({ color: ENEMY_COLOR })
+    );
+
+    // Pick one of the four edges, then a spot along it, just inside the arena.
+    const edge = Math.floor(Math.random() * 4);
+    const along = (Math.random() * 2 - 1) * arenaSize;
+    const inset = arenaSize * (0.92 + Math.random() * 0.06);
+    if (edge === 0) mesh.position.set(along, 0, -inset);
+    else if (edge === 1) mesh.position.set(along, 0, inset);
+    else if (edge === 2) mesh.position.set(-inset, 0, along);
+    else mesh.position.set(inset, 0, along);
+
+    scene.add(mesh);
+    enemies.push({ mesh, hp: enemyHP, alive: true, radius: enemyRadius });
+  }
+}
+
+export function updateEnemies(dt, targetPos) {
+  // Drop the ones killed last frame first, in place: the caller holds this exact array.
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (enemies[i].alive) continue;
+    const mesh = enemies[i].mesh;
+    if (mesh.parent) mesh.parent.remove(mesh);
+    enemies.splice(i, 1);
+  }
+
+  const step = enemySpeed * dt;
+  for (const enemy of enemies) {
+    const position = enemy.mesh.position;
+    const dx = targetPos.x - position.x;
+    const dz = targetPos.z - position.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance > 1e-4) {
+      const travel = Math.min(step, distance); // don't overshoot the golem
+      position.x += (dx / distance) * travel;
+      position.z += (dz / distance) * travel;
+    }
+    position.y = 0; // keep the meshes on the floor
+  }
+}
+
+export function getEnemies() {
+  return enemies;
+}
+
+export function clearEnemies() {
+  for (const enemy of enemies) {
+    if (enemy.mesh.parent) enemy.mesh.parent.remove(enemy.mesh);
+  }
+  enemies.length = 0;
+}
