@@ -58,6 +58,7 @@ export const waterPierceCount = 3;       // how many enemies a water shot passes
 // Element fields
 export const elementFieldCount = 2;      // fields spawned per floor
 export const elementFieldRadius = 1.8;
+export const enemyElementDropChance = 0.25; // chance an enemy drops a field on death
 
 // Per-element tempo modifiers (multipliers)
 export const elementMoveSpeedMul = {

@@ -9,11 +9,12 @@ import {
   screenShakeAmount, screenShakeDecay, elementColors,
   spawnMargin, minSpawnDistance, spawnIndicatorDuration,
   columnCount, columnRadius, columnMinDistanceFromPlayer,
+  enemyElementDropChance,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js';
 import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
-import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
+import { spawnElementFields, spawnElementFieldAt, getElementFields, clearElementFields } from './elements.js';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
@@ -308,12 +309,16 @@ function hitEnemies() {
           if (shot.mesh) scene.remove(shot.mesh);
         }
         if (enemy.hp <= 0) {
+          const deathPos = enemy.mesh.position.clone();
           enemy.alive = false;
           if (enemy.mesh) scene.remove(enemy.mesh);
           if (enemy.healthBar) { enemy.healthBar.remove(); enemy.healthBar = null; }
-          spawnHitBurst(scene, enemy.mesh.position, elementColors[player.element]);
+          spawnHitBurst(scene, deathPos, elementColors[player.element]);
           screenShake += screenShakeAmount;
           score += 1;
+          if (Math.random() < enemyElementDropChance) {
+            spawnElementFieldAt(scene, deathPos);
+          }
         }
         break;   // this shot hit one enemy this frame
       }

@@ -31,6 +31,17 @@ export function spawnElementFields(scene, count) {
   }
 }
 
+export function spawnElementFieldAt(scene, position, type) {
+  const chosenType = type ?? elementTypes[Math.floor(Math.random() * elementTypes.length)];
+  const geometry = new THREE.CylinderGeometry(elementFieldRadius, elementFieldRadius, 0.08, 24);
+  geometry.translate(0, 0.04, 0);
+  const material = new THREE.MeshBasicMaterial({ color: elementColors[chosenType] });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(position.x, 0.1, position.z);
+  scene.add(mesh);
+  fields.push({ mesh, type: chosenType, alive: true, radius: elementFieldRadius });
+}
+
 export function getElementFields() { return fields; }
 
 export function clearElementFields() {
