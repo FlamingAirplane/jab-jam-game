@@ -125,6 +125,22 @@ addEventListener('pointermove', (event) => {
   mouseNDC.y = -(event.clientY / innerHeight) * 2 + 1;
 });
 
+// Touch support: tap/ drag anywhere to aim and fire.
+addEventListener('touchstart', (event) => {
+  if (event.target.tagName === 'BUTTON') return;
+  const t = event.touches[0];
+  mouseNDC.x = (t.clientX / innerWidth) * 2 - 1;
+  mouseNDC.y = -(t.clientY / innerHeight) * 2 + 1;
+  setMouseDown(true);
+}, { passive: false });
+addEventListener('touchmove', (event) => {
+  event.preventDefault();
+  const t = event.touches[0];
+  mouseNDC.x = (t.clientX / innerWidth) * 2 - 1;
+  mouseNDC.y = -(t.clientY / innerHeight) * 2 + 1;
+}, { passive: false });
+addEventListener('touchend', () => setMouseDown(false));
+
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
