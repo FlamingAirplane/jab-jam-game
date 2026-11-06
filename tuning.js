@@ -72,3 +72,10 @@ export const cameraHeight = 14;          // zoomed in half
 export const cameraDistance = 11;        // zoomed in half
 export const cameraFollowSpeed = 8;      // lerp speed
 export const cameraAngle = Math.PI / 4;  // 45 degrees around the golem
+
+// Enemy health bar
+export const enemyHealthBarWidth = 40;   // pixels
+export const enemyHealthBarHeight = 5;   // pixels
+export const enemyHealthBarYOffset = 28; // pixels above enemy centre on screen
+export const enemyHealthBarColor = '#e74c3c';
+export const enemyHealthBarBg = '#333333';

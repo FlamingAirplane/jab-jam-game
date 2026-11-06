@@ -1,9 +1,15 @@
 // ui.js — the plain-DOM overlay: kills, floor, health bar, and the game over / restart panel.
+import {
+  enemyHealthBarWidth, enemyHealthBarHeight, enemyHealthBarYOffset,
+  enemyHealthBarColor, enemyHealthBarBg,
+} from './tuning.js';
+
 const GREY = { dark: '#595959', mid: '#7f7f7f', light: '#a5a5a5', pale: '#cccccc', white: '#f2f2f2' };
 
 let els = null;            // built by createUI
 let onRestart = null;      // set by main.js
 let shown = { score: null, floor: null };   // skip redrawing unchanged readouts
+const enemyBars = [];      // active enemy health-bar containers
 
 export function createUI() {
   const root = document.getElementById('ui') || document.createElement('div');
@@ -98,3 +104,65 @@ export function showGameOver(score, floor) {
 }
 
 export function hideGameOver() { if (els) els.over.style.display = 'none'; }
+
+// --- Enemy health bars -------------------------------------------------------
+export function createEnemyHealthBar() {
+  const container = document.createElement('div');
+  Object.assign(container.style, {
+    position: 'absolute', pointerEvents: 'none',
+    width: `${enemyHealthBarWidth}px`, height: `${enemyHealthBarHeight}px`,
+  });
+
+  const bg = document.createElement('div');
+  Object.assign(bg.style, {
+    width: '100%', height: '100%', background: enemyHealthBarBg,
+    border: `1px solid ${GREY.dark}`, borderRadius: '1px', overflow: 'hidden',
+  });
+
+  const fg = document.createElement('div');
+  Object.assign(fg.style, {
+    width: '100%', height: '100%', background: enemyHealthBarColor,
+  });
+
+  bg.appendChild(fg);
+  container.appendChild(bg);
+  document.body.appendChild(container);
+  enemyBars.push(container);
+
+  return {
+    element: container,
+    setHp(hp, maxHp) {
+      const ratio = Math.max(0, Math.min(1, maxHp > 0 ? hp / maxHp : 0));
+      fg.style.width = `${ratio * 100}%`;
+    },
+    remove() {
+      const i = enemyBars.indexOf(container);
+      if (i >= 0) enemyBars.splice(i, 1);
+      if (container.parentNode) container.parentNode.removeChild(container);
+    },
+  };
+}
+
+export function positionEnemyHealthBar(barElement, worldPosition, camera, renderer) {
+  const ndc = worldPosition.clone().project(camera);
+  const canvas = renderer.domElement;
+
+  if (ndc.z > 1 || ndc.z < -1) {
+    barElement.style.display = 'none';
+    return;
+  }
+
+  const screenX = (ndc.x * 0.5 + 0.5) * canvas.clientWidth;
+  const screenY = (1 - (ndc.y * 0.5 + 0.5)) * canvas.clientHeight;
+
+  barElement.style.display = 'block';
+  barElement.style.left = `${screenX - enemyHealthBarWidth / 2}px`;
+  barElement.style.top = `${screenY - enemyHealthBarHeight - enemyHealthBarYOffset}px`;
+}
+
+export function clearEnemyHealthBars() {
+  for (const bar of enemyBars) {
+    if (bar.parentNode) bar.parentNode.removeChild(bar);
+  }
+  enemyBars.length = 0;
+}

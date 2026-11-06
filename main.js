@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
-  enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
+  enemyHP, enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
   screenShakeAmount, screenShakeDecay, elementColors,
 } from './tuning.js';
@@ -10,7 +10,10 @@ import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setEleme
 import { spawnHitBurst, updateFX, clearFX } from './fx.js';
 import { spawnWave, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
 import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
-import { createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver } from './ui.js';
+import {
+  createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver,
+  createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
+} from './ui.js';
 
 // --- Overlay -----------------------------------------------------------------
 const ui = createUI();
@@ -107,7 +110,17 @@ const alive = (thing) => thing.alive !== false;   // treat a missing flag as ali
 const liveEnemies = () => getEnemies().filter(alive).length;
 const distanceXZ = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
+function attachHealthBars() {
+  for (const enemy of getEnemies()) {
+    if (!enemy.healthBar) {
+      enemy.healthBar = createEnemyHealthBar();
+      enemy.healthBar.setHp(enemy.hp, enemyHP);
+    }
+  }
+}
+
 function restart() {
+  clearEnemyHealthBars();
   for (const enemy of getEnemies()) if (enemy.mesh) scene.remove(enemy.mesh);   // don't trust clearEnemies to un-draw them
   clearEnemies();
   for (const shot of getProjectiles()) {
@@ -128,6 +141,7 @@ function restart() {
   shownHp = player.hp;
   setMouseDown(false);
   spawnWave(scene, waveSize);
+  attachHealthBars();
   spawnElementFields(scene, elementFieldCount);
   setScore(score);
   setFloor(floor);
@@ -161,6 +175,7 @@ function hitEnemies() {
       const reach = projectileRadius + (enemy.radius ?? enemyRadius);
       if (distanceXZ(shot.mesh.position, enemy.mesh.position) < reach) {
         enemy.hp -= shot.damage ?? projectileDamage;
+        if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemyHP);
         if (shot.pierce !== undefined) {
           shot.pierce -= 1;
           if (shot.pierce <= 0) {
@@ -174,6 +189,7 @@ function hitEnemies() {
         if (enemy.hp <= 0) {
           enemy.alive = false;
           if (enemy.mesh) scene.remove(enemy.mesh);
+          if (enemy.healthBar) { enemy.healthBar.remove(); enemy.healthBar = null; }
           spawnHitBurst(scene, enemy.mesh.position, elementColors[player.element]);
           screenShake += screenShakeAmount;
           score += 1;
@@ -231,6 +247,12 @@ function update(dt) {
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
 
+  for (const enemy of getEnemies()) {
+    if (alive(enemy) && enemy.healthBar) {
+      positionEnemyHealthBar(enemy.healthBar.element, enemy.mesh.position, camera, renderer);
+    }
+  }
+
   absorbFields();
   hitEnemies();
   touchDamage(dt);
@@ -249,6 +271,7 @@ function update(dt) {
     if (waveTimer <= 0) {
       floor += 1;
       spawnWave(scene, waveSize + (floor - 1) * waveGrowth);
+      attachHealthBars();
       clearElementFields();
       spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
       waveTimer = spawnInterval;
@@ -274,6 +297,7 @@ renderer.setAnimationLoop(() => {
 });
 
 spawnWave(scene, waveSize);
+attachHealthBars();
 waveTimer = spawnInterval;
 spawnElementFields(scene, elementFieldCount);
 setScore(score);
