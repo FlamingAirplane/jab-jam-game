@@ -8,6 +8,7 @@ import {
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
   screenShakeAmount, screenShakeDecay, elementColors,
   spawnMargin, minSpawnDistance, spawnIndicatorDuration,
+  columnCount, columnRadius, columnMinDistanceFromPlayer,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js';
@@ -101,6 +102,7 @@ addEventListener('resize', () => {
 // --- Game state --------------------------------------------------------------
 const player = createPlayer(scene);
 const maxHp = () => player.maxHp ?? playerHP;
+const columnMeshes = [];
 
 let state = 'playing';       // 'playing' | 'gameover'
 let score = 0;               // enemies killed
@@ -168,6 +170,71 @@ function spawnWaveCustom(scene, count) {
   }
 }
 
+function clearColumns() {
+  for (const mesh of columnMeshes) {
+    if (mesh.parent) mesh.parent.remove(mesh);
+  }
+  columnMeshes.length = 0;
+}
+
+function createColumns(scene, count) {
+  clearColumns();
+  const geometry = new THREE.CylinderGeometry(columnRadius, columnRadius, 4, 16);
+  const material = new THREE.MeshStandardMaterial({ color: '#4a4a4a' });
+  const positions = [];
+  const playerStart = new THREE.Vector3(0, 0, 0);
+
+  for (let i = 0; i < count; i++) {
+    let pos = null;
+    let attempts = 0;
+    while (attempts < 30) {
+      const x = (Math.random() * 2 - 1) * (arenaSize - columnRadius - 2);
+      const z = (Math.random() * 2 - 1) * (arenaSize - columnRadius - 2);
+      const candidate = new THREE.Vector3(x, 2, z);
+      if (distanceXZ(candidate, playerStart) < columnMinDistanceFromPlayer) {
+        attempts++;
+        continue;
+      }
+      let tooClose = false;
+      for (const other of positions) {
+        if (distanceXZ(candidate, other) < columnRadius * 4) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (!tooClose) {
+        pos = candidate;
+        break;
+      }
+      attempts++;
+    }
+    if (!pos) continue;
+    positions.push(pos);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(pos);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    columnMeshes.push(mesh);
+  }
+}
+
+function resolveColumnCollisions(position, radius) {
+  for (const mesh of columnMeshes) {
+    const dx = position.x - mesh.position.x;
+    const dz = position.z - mesh.position.z;
+    const dist = Math.hypot(dx, dz);
+    const minDist = radius + columnRadius;
+    if (dist < minDist && dist > 0.001) {
+      const push = (minDist - dist) / dist;
+      position.x += dx * push;
+      position.z += dz * push;
+    }
+    position.x = Math.max(-arenaSize, Math.min(arenaSize, position.x));
+    position.z = Math.max(-arenaSize, Math.min(arenaSize, position.z));
+  }
+}
+
 function restart() {
   clearSpawnIndicators();
   clearEnemyHealthBars();
@@ -178,6 +245,7 @@ function restart() {
     if (shot.mesh) scene.remove(shot.mesh);
   }
   clearElementFields();
+  clearColumns();
   clearFX();
   screenShake = 0;
   player.hp = maxHp();
@@ -191,6 +259,7 @@ function restart() {
   waveTimer = spawnInterval;
   shownHp = player.hp;
   setMouseDown(false);
+  createColumns(scene, columnCount);
   spawnWaveCustom(scene, waveSize);
   attachHealthBars();
   spawnElementFields(scene, elementFieldCount);
@@ -315,12 +384,16 @@ function updateCamera(dt) {
 // --- Frame -------------------------------------------------------------------
 function update(dt) {
   updatePlayer(player, dt, ctx);
+  resolveColumnCollisions(player.group.position, playerRadius);
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
 
   for (const enemy of getEnemies()) {
-    if (alive(enemy) && enemy.healthBar) {
-      positionEnemyHealthBar(enemy.healthBar.element, enemy.mesh.position, camera, renderer);
+    if (alive(enemy)) {
+      resolveColumnCollisions(enemy.mesh.position, enemy.radius ?? enemyRadius);
+      if (enemy.healthBar) {
+        positionEnemyHealthBar(enemy.healthBar.element, enemy.mesh.position, camera, renderer);
+      }
     }
   }
 
@@ -375,6 +448,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
+createColumns(scene, columnCount);
 spawnWaveCustom(scene, waveSize);
 attachHealthBars();
 waveTimer = spawnInterval;
