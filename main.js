@@ -15,7 +15,7 @@ import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setEleme
 import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
 import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js?v=2';
 import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=2';
-import { playHit, playDeath, resumeAudio } from './audio.js?v=2';
+import { playHit, playDeath, playAbsorb, resumeAudio } from './audio.js?v=2';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
@@ -343,6 +343,7 @@ function absorbFields() {
     if (!alive(field)) continue;
     if (distanceXZ(playerPos, field.mesh.position) < field.radius + playerRadius) {
       setElement(player, field.type);
+      playAbsorb(field.type);
       field.alive = false;
       if (field.mesh.parent) field.mesh.parent.remove(field.mesh);
     }
@@ -378,7 +379,7 @@ function hitEnemies() {
           spawnHitBurst(scene, deathPos, elementColors[player.element]);
           screenShake += screenShakeAmount;
           score += 1;
-          playHit();
+          playHit(player.element);
           if (Math.random() < enemyElementDropChance) {
             spawnElementFieldAt(scene, deathPos);
           }

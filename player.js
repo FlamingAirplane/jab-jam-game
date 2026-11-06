@@ -266,7 +266,7 @@ function spawnShot(player) {
   shotScene.add(mesh);
 
   spawnMuzzleFlash(shotScene, mesh.position.clone(), elementColors[element] ?? PROJECTILE_COLOR);
-  playShoot();
+  playShoot(element);
 
   projectiles.push({
     mesh,
