@@ -14,7 +14,8 @@ import {
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js?v=2';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
 import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js?v=2';
-import { spawnElementFields, spawnElementFieldAt, getElementFields, clearElementFields } from './elements.js?v=2';
+import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=2';
+import { playHit, playDeath, resumeAudio } from './audio.js?v=2';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
@@ -47,10 +48,35 @@ const sun = new THREE.DirectionalLight('#f2f2f2', 1.8);
 sun.position.set(8, 16, 6);
 scene.add(sun);
 
-// --- The floor ---------------------------------------------------------------
+// --- Mosaic floor texture ----------------------------------------------------
+function createMosaicTexture() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx2d = canvas.getContext('2d');
+  const greys = ['#595959', '#7f7f7f', '#a5a5a5'];
+  const tile = 32;
+  for (let y = 0; y < size; y += tile) {
+    for (let x = 0; x < size; x += tile) {
+      ctx2d.fillStyle = greys[Math.floor(Math.random() * greys.length)];
+      ctx2d.fillRect(x, y, tile, tile);
+      ctx2d.strokeStyle = '#4a4a4a';
+      ctx2d.lineWidth = 1;
+      ctx2d.strokeRect(x, y, tile, tile);
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(8, 8);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 const floorMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(arenaSize * 2, arenaSize * 2),
-  new THREE.MeshStandardMaterial({ color: '#7f7f7f' })
+  new THREE.MeshStandardMaterial({ map: createMosaicTexture(), roughness: 0.9 })
 );
 floorMesh.rotation.x = -Math.PI / 2;
 scene.add(floorMesh);
@@ -85,7 +111,12 @@ addEventListener('keydown', (event) => {
 });
 addEventListener('keyup', (event) => { for (const token of spellings(event)) keys.delete(token); });
 
-addEventListener('mousedown', (event) => { if (event.button === 0) setMouseDown(true); });
+addEventListener('mousedown', (event) => {
+  if (event.button === 0) {
+    setMouseDown(true);
+    resumeAudio();
+  }
+});
 addEventListener('mouseup', (event) => { if (event.button === 0) setMouseDown(false); });
 addEventListener('blur', () => setMouseDown(false));
 
@@ -316,6 +347,7 @@ function hitEnemies() {
           spawnHitBurst(scene, deathPos, elementColors[player.element]);
           screenShake += screenShakeAmount;
           score += 1;
+          playHit();
           if (Math.random() < enemyElementDropChance) {
             spawnElementFieldAt(scene, deathPos);
           }
@@ -405,11 +437,13 @@ function update(dt) {
   absorbFields();
   hitEnemies();
   touchDamage(dt);
+  updateElementFields(dt);
 
   if (player.hp <= 0 && !player.dead) {
     player.dead = true;
     state = 'gameover';
     screenShake += screenShakeAmount * 3;
+    playDeath();
     setMouseDown(false);
     showGameOver(score, floor);
   }

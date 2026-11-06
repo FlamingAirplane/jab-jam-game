@@ -2,16 +2,15 @@
 import * as THREE from 'three';
 import { enemySpeed, enemyHP, enemyRadius, arenaSize } from './tuning.js';
 
-const ENEMY_COLOR = '#767c84';
+const ENEMY_COLOR = '#5a5a5a';
 const enemies = []; // [{ mesh, hp, alive, radius }]
-let enemyGeometry = null; // one shared box, made on the first spawn
+let enemyGeometry = null; // one shared shape, made on the first spawn
 
-// A box twice the enemy radius, its base anchored at y = 0 so a mesh at y = 0 stands on the floor.
+// A jagged floating shard — a tall pyramid with its base on the floor.
 function getEnemyGeometry() {
   if (!enemyGeometry) {
-    const size = enemyRadius * 2;
-    enemyGeometry = new THREE.BoxGeometry(size, size, size);
-    enemyGeometry.translate(0, size / 2, 0);
+    enemyGeometry = new THREE.ConeGeometry(enemyRadius, enemyRadius * 2.4, 4);
+    enemyGeometry.translate(0, enemyRadius * 1.2, 0);
   }
   return enemyGeometry;
 }
@@ -19,7 +18,7 @@ function getEnemyGeometry() {
 export function spawnEnemyAt(scene, position) {
   const mesh = new THREE.Mesh(
     getEnemyGeometry(),
-    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR })
+    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR, roughness: 0.9, flatShading: true })
   );
   mesh.position.copy(position);
   mesh.position.y = 0;

@@ -21,7 +21,8 @@ import {
   elementRotationSpeedMul,
   trailSpawnInterval,
 } from './tuning.js';
-import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js';
+import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js?v=2';
+import { playShoot } from './audio.js?v=2';
 
 const GOLEM_COLOR = '#c6cbd0';
 const PROJECTILE_COLOR = '#f1f2f4';
@@ -77,11 +78,25 @@ export function createPlayer(scene) {
   clearFX();
 
   const group = new THREE.Group();
-  const size = playerRadius * 2;
-  const geometry = new THREE.BoxGeometry(size, size, size);
-  geometry.translate(0, size / 2, 0); // base sits on the floor, so the group can live at y = 0
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: GOLEM_COLOR }));
-  group.add(mesh);
+  const material = new THREE.MeshStandardMaterial({ color: GOLEM_COLOR, roughness: 0.8 });
+
+  // Chunky golem body: a torso and two shoulder blocks.
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.7), material);
+  torso.position.y = 0.75;
+  group.add(torso);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.55), material);
+  head.position.y = 1.55;
+  group.add(head);
+
+  const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
+  shoulderL.position.set(-0.62, 1.1, 0);
+  group.add(shoulderL);
+
+  const shoulderR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, 0.45), material);
+  shoulderR.position.set(0.62, 1.1, 0);
+  group.add(shoulderR);
+
   group.position.set(0, 0, 0);
   scene.add(group);
 
@@ -90,7 +105,7 @@ export function createPlayer(scene) {
 
   const player = {
     group,
-    mesh, // the golem box, so setElement can recolour it
+    mesh: torso, // one representative mesh for setElement to recolour
     hp: playerHP,
     maxHp: playerHP,
     dead: false,
@@ -104,9 +119,12 @@ export function createPlayer(scene) {
 
 export function setElement(player, type) {
   player.element = type;
-  if (player.mesh && player.mesh.material) {
-    player.mesh.material.color.set(elementColors[type] ?? GOLEM_COLOR);
-  }
+  const color = new THREE.Color(elementColors[type] ?? GOLEM_COLOR);
+  player.group.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material.color.copy(color);
+    }
+  });
 }
 
 export function getElement(player) {
@@ -226,6 +244,7 @@ function spawnShot(player) {
   shotScene.add(mesh);
 
   spawnMuzzleFlash(shotScene, mesh.position.clone(), elementColors[element] ?? PROJECTILE_COLOR);
+  playShoot();
 
   projectiles.push({
     mesh,
