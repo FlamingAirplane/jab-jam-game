@@ -27,5 +27,5 @@ Example: "Weather changes, upgrades, a story."
 
 Example: "Sound of waves; ships that ignore the light."
 
-> The other three elements (darkness, light, earth, wind, fire, water — we picked three today).
+> The other three elements — darkness, light, wind (fire, water and earth are in today).
 > A second enemy type. Skill points and a skill tree. Item drops.
