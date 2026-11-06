@@ -24,8 +24,8 @@ import { buildMap } from './level.js?v=3';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
-  createSpawnIndicator, positionSpawnIndicator,
-} from './ui.js?v=2';
+  createSpawnIndicator, positionSpawnIndicator, showBanner,
+} from './ui.js?v=3';
 
 // --- Overlay -----------------------------------------------------------------
 const ui = createUI();
@@ -611,10 +611,14 @@ function update(dt) {
       } else {
         floor += 1;
         waveInFloor = 1;
+        screenShake += screenShakeAmount * 2;
+        showBanner('Floor Complete', `Descending to floor ${floor}`, 1500);
+        createLevel(scene);
         spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
         attachHealthBars();
         clearElementFields();
         spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
+        setTimeout(() => showBanner(`Floor ${floor}`, 'Survive the waves', 2500), 1600);
       }
       waveTimer = spawnInterval;
       setWave(waveInFloor, wavesPerFloor);
@@ -655,6 +659,7 @@ renderer.setAnimationLoop(() => {
 });
 
 createLevel(scene);
+showBanner(`Floor ${floor}`, 'Survive the waves', 3000);
 spawnWaveCustom(scene, waveSize);
 attachHealthBars();
 waveTimer = spawnInterval;
