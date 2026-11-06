@@ -10,6 +10,7 @@ import {
   spawnMargin, minSpawnDistance, spawnIndicatorDuration,
   columnCount, columnRadius, columnMinDistanceFromPlayer,
   wallHeight, wallThickness,
+  internalWallCount, internalWallLength, internalWallThickness,
   enemyElementDropChance,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js?v=2';
@@ -112,23 +113,33 @@ const grid = new THREE.GridHelper(arenaSize * 2, arenaSize, '#f2f2f2', '#a5a5a5'
 grid.position.y = 0.02;
 scene.add(grid);
 
-// --- Perimeter walls ---------------------------------------------------------
+// --- Walls (perimeter + internal) -------------------------------------------
 const wallMaterial = new THREE.MeshStandardMaterial({ color: '#4a4a4a', roughness: 0.9 });
-const wallMeshes = [];
+const walls = [];
+function addWall(x, z, w, d) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, wallHeight, d), wallMaterial);
+  mesh.position.set(x, wallHeight / 2, z);
+  scene.add(mesh);
+  walls.push({ x, z, halfW: w / 2, halfD: d / 2 });
+}
 function createWalls(scene) {
   const half = arenaSize + wallThickness / 2;
   const long = arenaSize * 2 + wallThickness * 2;
-  const specs = [
-    { x: 0, z: -half, w: long, d: wallThickness },
-    { x: 0, z: half, w: long, d: wallThickness },
-    { x: -half, z: 0, w: wallThickness, d: long },
-    { x: half, z: 0, w: wallThickness, d: long },
-  ];
-  for (const s of specs) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(s.w, wallHeight, s.d), wallMaterial);
-    mesh.position.set(s.x, wallHeight / 2, s.z);
-    scene.add(mesh);
-    wallMeshes.push(mesh);
+  addWall(0, -half, long, wallThickness);
+  addWall(0, half, long, wallThickness);
+  addWall(-half, 0, wallThickness, long);
+  addWall(half, 0, wallThickness, long);
+
+  // Internal walls to break up the arena.
+  for (let i = 0; i < internalWallCount; i++) {
+    const horizontal = Math.random() < 0.5;
+    const wx = (Math.random() * 2 - 1) * (arenaSize - internalWallLength - 4);
+    const wz = (Math.random() * 2 - 1) * (arenaSize - internalWallThickness - 4);
+    if (horizontal) {
+      addWall(wx, wz, internalWallLength, internalWallThickness);
+    } else {
+      addWall(wx, wz, internalWallThickness, internalWallLength);
+    }
   }
 }
 createWalls(scene);
@@ -342,6 +353,23 @@ function resolveColumnCollisions(position, radius) {
       position.z += dz * push;
     }
   }
+}
+
+function resolveWallCollisions(position, radius) {
+  for (const wall of walls) {
+    // Closest point on the axis-aligned wall box to the circle center.
+    const closestX = Math.max(wall.x - wall.halfW, Math.min(position.x, wall.x + wall.halfW));
+    const closestZ = Math.max(wall.z - wall.halfD, Math.min(position.z, wall.z + wall.halfD));
+    const dx = position.x - closestX;
+    const dz = position.z - closestZ;
+    const distSq = dx * dx + dz * dz;
+    if (distSq > 0 && distSq < radius * radius) {
+      const dist = Math.sqrt(distSq);
+      const push = (radius - dist) / dist;
+      position.x += dx * push;
+      position.z += dz * push;
+    }
+  }
   position.x = Math.max(-arenaSize, Math.min(arenaSize, position.x));
   position.z = Math.max(-arenaSize, Math.min(arenaSize, position.z));
 }
@@ -534,6 +562,7 @@ function updateCamera(dt) {
 function update(dt) {
   updatePlayer(player, dt, ctx);
   resolveColumnCollisions(player.group.position, playerRadius);
+  resolveWallCollisions(player.group.position, playerRadius);
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
   separateEnemies();
@@ -541,6 +570,7 @@ function update(dt) {
   for (const enemy of getEnemies()) {
     if (alive(enemy)) {
       resolveColumnCollisions(enemy.mesh.position, enemy.radius ?? enemyRadius);
+      resolveWallCollisions(enemy.mesh.position, enemy.radius ?? enemyRadius);
       if (enemy.healthBar) {
         positionEnemyHealthBar(enemy.healthBar.element, enemy.mesh.position, camera, renderer);
       }

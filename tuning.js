@@ -36,11 +36,14 @@ export const spawnIndicatorColor = '#f2f2f2';
 
 // Floor — 4x larger area: half-extent doubled from 20 to 40
 export const arenaSize = 40;
-export const columnCount = 10;
+export const columnCount = 14;
 export const columnRadius = 1.5;
 export const columnMinDistanceFromPlayer = 12;
 export const wallHeight = 4;
 export const wallThickness = 1.5;
+export const internalWallCount = 4;
+export const internalWallLength = 18;
+export const internalWallThickness = 1.8;
 
 // Elements
 export const elementTypes = ['fire', 'water', 'earth'];
