@@ -16,7 +16,11 @@ import {
   earthProjectileSpeed,
   earthProjectileScale,
   waterPierceCount,
+  elementMoveSpeedMul,
+  elementFireRateMul,
+  trailSpawnInterval,
 } from './tuning.js';
+import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js';
 
 const GOLEM_COLOR = '#c6cbd0';
 const PROJECTILE_COLOR = '#f1f2f4';
@@ -62,6 +66,7 @@ export function createPlayer(scene) {
   // A restart builds a fresh golem: drop the old one and the shots it left in the air.
   if (activePlayer && activePlayer.group.parent) activePlayer.group.parent.remove(activePlayer.group);
   clearProjectiles();
+  clearFX();
 
   const group = new THREE.Group();
   const size = playerRadius * 2;
@@ -120,7 +125,7 @@ export function updatePlayer(player, dt, ctx) {
   if (held(keys, 'KeyD', 'd')) moveStep.add(right);
   if (held(keys, 'KeyA', 'a')) moveStep.sub(right);
   if (moveStep.lengthSq() > 0) {
-    moveStep.normalize().multiplyScalar(moveSpeed * dt);
+    moveStep.normalize().multiplyScalar(moveSpeed * elementMoveSpeedMul[player.element] * dt);
     position.x = clamp(position.x + moveStep.x, -arenaSize, arenaSize);
     position.z = clamp(position.z + moveStep.z, -arenaSize, arenaSize);
   }
@@ -140,7 +145,7 @@ export function updatePlayer(player, dt, ctx) {
   fireTimer = Math.max(0, fireTimer - dt);
   if (firing(ctx) && fireTimer === 0) {
     spawnShot(player);
-    fireTimer = 1 / fireRate;
+    fireTimer = 1 / (fireRate * elementFireRateMul[player.element]);
   }
 
   player.dead = player.hp <= 0;
@@ -159,6 +164,13 @@ export function updateProjectiles(dt) {
     const step = shot.speed * dt;
     shot.mesh.position.addScaledVector(shot.dir, step);
     shot.traveled += step;
+
+    shot.trailTimer += dt;
+    if (shot.trailTimer >= trailSpawnInterval) {
+      shot.trailTimer = 0;
+      spawnProjectileTrailDot(shotScene, shot.mesh.position.clone(), shot.mesh.material.color);
+    }
+
     if (shot.traveled >= projectileRange) shot.alive = false; // cleaned up next frame
   }
 }
@@ -202,6 +214,8 @@ function spawnShot(player) {
   mesh.position.addScaledVector(dir, playerRadius); // clear of the golem's own box
   shotScene.add(mesh);
 
+  spawnMuzzleFlash(shotScene, mesh.position.clone(), elementColors[element] ?? PROJECTILE_COLOR);
+
   projectiles.push({
     mesh,
     dir,
@@ -210,6 +224,7 @@ function spawnShot(player) {
     traveled: 0,
     speed,
     pierce,
+    trailTimer: 0,
   });
 }
 

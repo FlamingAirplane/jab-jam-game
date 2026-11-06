@@ -46,6 +46,27 @@ export const waterPierceCount = 3;       // how many enemies a water shot passes
 export const elementFieldCount = 2;      // fields spawned per floor
 export const elementFieldRadius = 1.8;
 
+// Per-element tempo modifiers (multipliers)
+export const elementMoveSpeedMul = {
+  fire: 1.0,
+  water: 1.25,   // water feels flowing and mobile
+  earth: 0.75,   // earth feels heavy
+};
+
+export const elementFireRateMul = {
+  fire: 1.0,     // fast
+  water: 0.8,    // steady
+  earth: 0.55,   // slow, heavy shots
+};
+
+// FX timing
+export const muzzleFlashDuration = 0.06;
+export const trailSpawnInterval = 0.04;  // seconds between trail dots
+export const burstParticleCount = 12;
+export const burstLifetime = 0.35;
+export const screenShakeAmount = 0.25;
+export const screenShakeDecay = 5;
+
 // Camera
 export const cameraHeight = 14;          // zoomed in half
 export const cameraDistance = 11;        // zoomed in half

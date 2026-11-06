@@ -4,8 +4,10 @@ import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
   enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
+  screenShakeAmount, screenShakeDecay, elementColors,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
+import { spawnHitBurst, updateFX, clearFX } from './fx.js';
 import { spawnWave, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
 import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
 import { createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver } from './ui.js';
@@ -99,6 +101,7 @@ let floor = 1;               // the descent itself arrives in M2
 let contactTimer = 0;
 let waveTimer = 0;
 let shownHp = null;
+let screenShake = 0;
 
 const alive = (thing) => thing.alive !== false;   // treat a missing flag as alive
 const liveEnemies = () => getEnemies().filter(alive).length;
@@ -112,6 +115,8 @@ function restart() {
     if (shot.mesh) scene.remove(shot.mesh);
   }
   clearElementFields();
+  clearFX();
+  screenShake = 0;
   player.hp = maxHp();
   player.dead = false;
   player.group.position.set(0, player.group.position.y, 0);
@@ -169,6 +174,8 @@ function hitEnemies() {
         if (enemy.hp <= 0) {
           enemy.alive = false;
           if (enemy.mesh) scene.remove(enemy.mesh);
+          spawnHitBurst(scene, enemy.mesh.position, elementColors[player.element]);
+          screenShake += screenShakeAmount;
           score += 1;
         }
         break;   // this shot hit one enemy this frame
@@ -203,6 +210,17 @@ function updateCamera(dt) {
   );
   const t = Math.min(1, cameraFollowSpeed * dt);
   currentCameraPos.lerp(targetCameraPos, t);
+
+  if (screenShake > 0) {
+    const shake = new THREE.Vector3(
+      (Math.random() - 0.5) * screenShake,
+      (Math.random() - 0.5) * screenShake,
+      (Math.random() - 0.5) * screenShake
+    );
+    currentCameraPos.add(shake);
+    screenShake = Math.max(0, screenShake - screenShakeDecay * dt);
+  }
+
   camera.position.copy(currentCameraPos);
   camera.lookAt(p.x, p.y, p.z);
 }
@@ -220,6 +238,7 @@ function update(dt) {
   if (player.hp <= 0 && !player.dead) {
     player.dead = true;
     state = 'gameover';
+    screenShake += screenShakeAmount * 3;
     setMouseDown(false);
     showGameOver(score, floor);
   }
@@ -249,6 +268,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);   // a tab switch must not teleport the world
   if (state === 'playing') update(dt);
+  updateFX(dt);
   updateCamera(dt);
   renderer.render(scene, camera);
 });
