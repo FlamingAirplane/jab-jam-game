@@ -22,6 +22,9 @@ import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElemen
 import { playHit, playDeath, playAbsorb, resumeAudio, startMusic, toggleMusic, isMusicMuted } from './audio.js?v=3';
 import { buildMap } from './level.js?v=4';
 import {
+  triggerAbility, updateAbilities, clearAbilities, getCooldowns,
+} from './abilities.js?v=1';
+import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
   createSpawnIndicator, positionSpawnIndicator, showBanner,
@@ -163,6 +166,17 @@ function setMouseDown(down) {
   }
 }
 
+function tryTriggerAbility() {
+  if (state !== 'playing' || !player) return;
+  const result = triggerAbility(player, scene);
+  if (result) {
+    resumeAudio();
+    tryStartMusic();
+  }
+}
+
+addEventListener('contextmenu', (event) => event.preventDefault());
+
 addEventListener('keydown', (event) => {
   if (event.code === 'Space' || event.code.startsWith('Arrow')) event.preventDefault();
   for (const token of spellings(event)) keys.add(token);
@@ -170,6 +184,7 @@ addEventListener('keydown', (event) => {
     const muted = toggleMusic();
     ui.setMusicMuted(muted);
   }
+  if (event.code === 'KeyE') tryTriggerAbility();
   if (state === 'gameover' && event.key.toLowerCase() === 'r') restart();
   tryStartMusic();
 });
@@ -180,6 +195,8 @@ addEventListener('mousedown', (event) => {
     setMouseDown(true);
     resumeAudio();
     tryStartMusic();
+  } else if (event.button === 2) {
+    tryTriggerAbility();
   }
 });
 addEventListener('mouseup', (event) => { if (event.button === 0) setMouseDown(false); });
@@ -371,6 +388,7 @@ function restart() {
   clearLevel();
   clearEnemyProjectiles();
   clearFX();
+  clearAbilities(scene);
   screenShake = 0;
   player.hp = maxHp();
   player.dead = false;
@@ -451,6 +469,28 @@ function blockProjectiles() {
   }
 }
 
+function killEnemy(enemy, deathPos) {
+  enemy.alive = false;
+  if (enemy.mesh) scene.remove(enemy.mesh);
+  if (enemy.healthBar) { enemy.healthBar.remove(); enemy.healthBar = null; }
+  spawnHitBurst(scene, deathPos, elementColors[player.element]);
+  screenShake += screenShakeAmount;
+  score += 1;
+  playHit(player.element);
+  if (Math.random() < enemyElementDropChance) {
+    spawnElementFieldAt(scene, deathPos);
+  }
+}
+
+function damageEnemy(enemy, damage) {
+  if (!alive(enemy)) return;
+  enemy.hp -= damage;
+  if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemy.maxHp ?? enemyHP);
+  if (enemy.hp <= 0) {
+    killEnemy(enemy, enemy.mesh.position.clone());
+  }
+}
+
 function hitEnemies() {
   const enemies = getEnemies();
   for (const shot of getProjectiles()) {
@@ -472,17 +512,7 @@ function hitEnemies() {
           if (shot.mesh) scene.remove(shot.mesh);
         }
         if (enemy.hp <= 0) {
-          const deathPos = enemy.mesh.position.clone();
-          enemy.alive = false;
-          if (enemy.mesh) scene.remove(enemy.mesh);
-          if (enemy.healthBar) { enemy.healthBar.remove(); enemy.healthBar = null; }
-          spawnHitBurst(scene, deathPos, elementColors[player.element]);
-          screenShake += screenShakeAmount;
-          score += 1;
-          playHit(player.element);
-          if (Math.random() < enemyElementDropChance) {
-            spawnElementFieldAt(scene, deathPos);
-          }
+          killEnemy(enemy, enemy.mesh.position.clone());
         }
         break;   // this shot hit one enemy this frame
       }
@@ -592,6 +622,22 @@ function update(dt) {
   touchDamage(dt);
   updateElementFields(dt);
 
+  // Alternate-fire abilities.
+  const abilityEvents = updateAbilities(dt, getEnemies(), scene);
+  for (const ev of abilityEvents) {
+    if (ev.type === 'damage') {
+      damageEnemy(ev.enemy, ev.damage);
+    } else if (ev.type === 'knockback') {
+      if (alive(ev.enemy)) {
+        ev.enemy.mesh.position.addScaledVector(ev.dir, ev.amount * dt);
+      }
+    } else if (ev.type === 'burst') {
+      spawnHitBurst(scene, ev.position, ev.color);
+    } else if (ev.type === 'shake') {
+      screenShake += ev.amount;
+    }
+  }
+
   if (player.hp <= 0 && !player.dead) {
     player.dead = true;
     state = 'gameover';
@@ -615,6 +661,7 @@ function update(dt) {
         screenShake += screenShakeAmount * 2;
         showBanner('Floor Complete', `Descending to floor ${floor}`, 1500);
         createLevel(scene, floor);
+        clearAbilities(scene);
         spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
         attachHealthBars();
         clearElementFields();

@@ -120,6 +120,22 @@ export const elementRotationSpeedMul = {
   earth: 0.6,    // heavy and slow to turn
 };
 
+// Alternate-fire abilities (one per element)
+export const abilityCooldown = { fire: 5, water: 5, earth: 6 }; // seconds
+export const fireGrenadeSpeed = 12;
+export const fireGrenadeFuse = 1.2;         // seconds until explosion if it doesn't hit first
+export const fireGrenadeBlastRadius = 6;
+export const fireGrenadeDamage = 40;
+export const waterWaveSpeed = 18;
+export const waterWaveWidth = 8;            // across the front of the wave
+export const waterWaveRange = 20;           // how far the wave travels
+export const waterWaveDamage = 15;
+export const waterWaveKnockback = 8;        // metres per second push
+export const earthquakeRadius = 14;
+export const earthquakeDamage = 30;
+export const earthquakeKnockback = 10;
+export const earthquakeDuration = 0.5;      // seconds for the shockwave to expand
+
 // FX timing
 export const muzzleFlashDuration = 0.06;
 export const trailSpawnInterval = 0.04;  // seconds between trail dots
