@@ -3,12 +3,14 @@
 *.sync-conflict-*
 .superpowers/
 dist/
-# references are images and links only; videos stay out of git
+# references are images and links only; videos and source archives stay out of git
 context/references/*.mp4
 context/references/*.mov
 context/references/*.webm
 context/references/*.avi
 context/references/*.mkv
+context/references/*.zip
+context/references/_unpacked/
 
 # gateway key lives here; never commit it
 .claude/settings.local.json
