@@ -72,9 +72,14 @@ export function createUI() {
   root.append(panel, over);
   if (!root.isConnected) document.body.appendChild(root);
 
-  els = { score, floor, hp, bar, over, overStats };
+  const wave = document.createElement('div');
+  Object.assign(wave.style, { marginTop: '4px', fontSize: '13px', color: GREY.pale });
+  panel.append(wave);
+
+  els = { score, floor, wave, hp, bar, over, overStats };
   setScore(0);
   setFloor(1);
+  setWave(1, 1);
   setHealth(1, 1);
   return { setRestartHandler(fn) { onRestart = fn; } };
 }
@@ -89,6 +94,11 @@ export function setFloor(n) {
   if (!els || shown.floor === n) return;
   shown.floor = n;
   els.floor.textContent = `Floor: ${n}`;
+}
+
+export function setWave(current, total) {
+  if (!els) return;
+  els.wave.textContent = `Wave: ${current} / ${total}`;
 }
 
 export function setHealth(hp, maxHp) {

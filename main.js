@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
   enemyHP, enemyRadius,
-  contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
+  contactDamage, contactCooldown, contactPushDistance, contactPushEnemy,
+  spawnInterval, waveSize, waveGrowth, wavesPerFloor,
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
   screenShakeAmount, screenShakeDecay, elementColors,
   spawnMargin, minSpawnDistance, spawnIndicatorDuration,
@@ -13,7 +14,7 @@ import { spawnHitBurst, updateFX, clearFX } from './fx.js';
 import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
 import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
 import {
-  createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver,
+  createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
   createSpawnIndicator, positionSpawnIndicator,
 } from './ui.js';
@@ -104,6 +105,7 @@ const maxHp = () => player.maxHp ?? playerHP;
 let state = 'playing';       // 'playing' | 'gameover'
 let score = 0;               // enemies killed
 let floor = 1;               // the descent itself arrives in M2
+let waveInFloor = 1;         // current wave out of wavesPerFloor
 let contactTimer = 0;
 let waveTimer = 0;
 let shownHp = null;
@@ -184,6 +186,7 @@ function restart() {
   setElement(player, 'fire');
   score = 0;
   floor = 1;
+  waveInFloor = 1;
   contactTimer = 0;
   waveTimer = spawnInterval;
   shownHp = player.hp;
@@ -193,6 +196,7 @@ function restart() {
   spawnElementFields(scene, elementFieldCount);
   setScore(score);
   setFloor(floor);
+  setWave(waveInFloor, wavesPerFloor);
   setHealth(player.hp, maxHp());
   hideGameOver();
   state = 'playing';
@@ -253,9 +257,28 @@ function touchDamage(dt) {
   for (const enemy of getEnemies()) {
     if (!alive(enemy)) continue;
     const reach = (enemy.radius ?? enemyRadius) + playerRadius;
-    if (contactTimer <= 0 && distanceXZ(enemy.mesh.position, player.group.position) < reach) {
-      player.hp -= contactDamage;
-      contactTimer = contactCooldown;
+    const dx = player.group.position.x - enemy.mesh.position.x;
+    const dz = player.group.position.z - enemy.mesh.position.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < reach) {
+      // Resolve overlap so enemies don't sit inside the golem.
+      const overlap = reach - dist;
+      const nx = dist > 0.001 ? dx / dist : 1;
+      const nz = dist > 0.001 ? dz / dist : 0;
+      player.group.position.x = Math.max(-arenaSize, Math.min(arenaSize, player.group.position.x + nx * overlap));
+      player.group.position.z = Math.max(-arenaSize, Math.min(arenaSize, player.group.position.z + nz * overlap));
+      enemy.mesh.position.x -= nx * overlap;
+      enemy.mesh.position.z -= nz * overlap;
+
+      if (contactTimer <= 0) {
+        player.hp -= contactDamage;
+        contactTimer = contactCooldown;
+        // Knock back both the golem and the enemy on contact.
+        player.group.position.x = Math.max(-arenaSize, Math.min(arenaSize, player.group.position.x + nx * contactPushDistance));
+        player.group.position.z = Math.max(-arenaSize, Math.min(arenaSize, player.group.position.z + nz * contactPushDistance));
+        enemy.mesh.position.x -= nx * contactPushEnemy;
+        enemy.mesh.position.z -= nz * contactPushEnemy;
+      }
       break;
     }
   }
@@ -313,16 +336,24 @@ function update(dt) {
     showGameOver(score, floor);
   }
 
-  // Floor escalation: quiet beat once the floor is clear, then a bigger wave and fresh fields.
+  // Floor escalation: quiet beat once the wave is clear, then the next wave or a new floor.
   if (liveEnemies() === 0) {
     waveTimer -= dt;
     if (waveTimer <= 0) {
-      floor += 1;
-      spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
-      attachHealthBars();
-      clearElementFields();
-      spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
+      if (waveInFloor < wavesPerFloor) {
+        waveInFloor += 1;
+        spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
+        attachHealthBars();
+      } else {
+        floor += 1;
+        waveInFloor = 1;
+        spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
+        attachHealthBars();
+        clearElementFields();
+        spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
+      }
       waveTimer = spawnInterval;
+      setWave(waveInFloor, wavesPerFloor);
     }
   }
 
@@ -350,4 +381,5 @@ waveTimer = spawnInterval;
 spawnElementFields(scene, elementFieldCount);
 setScore(score);
 setFloor(floor);
+setWave(waveInFloor, wavesPerFloor);
 setHealth(player.hp, maxHp());

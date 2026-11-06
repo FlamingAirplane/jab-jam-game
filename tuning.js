@@ -18,11 +18,14 @@ export const enemyHP = 50;
 export const enemyRadius = 0.7;
 export const contactDamage = 10;
 export const contactCooldown = 0.8;  // seconds between contact hits on the golem
+export const contactPushDistance = 1.2;   // how far the player is knocked back on contact
+export const contactPushEnemy = 0.6;      // how far the enemy is knocked back on contact
 
 // Waves
 export const spawnInterval = 2.5;    // seconds of quiet before the next wave
 export const waveSize = 8;           // enemies in wave 1
 export const waveGrowth = 4;         // extra enemies per floor (used from M2)
+export const wavesPerFloor = 3;      // how many waves before descending to the next floor
 
 // Spawning
 export const spawnMargin = 5;          // extra distance outside the camera view to spawn
