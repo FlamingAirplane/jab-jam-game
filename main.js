@@ -131,6 +131,21 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
+// --- Optional FPS panel ------------------------------------------------------
+const urlParams = new URLSearchParams(location.search);
+const showFps = urlParams.has('fps');
+let fpsPanel = null;
+if (showFps) {
+  fpsPanel = document.createElement('div');
+  Object.assign(fpsPanel.style, {
+    position: 'fixed', right: '12px', top: '12px', zIndex: '20',
+    padding: '8px 12px', background: 'rgba(0,0,0,0.6)', color: '#f2f2f2',
+    font: '13px/1.4 monospace', pointerEvents: 'none',
+  });
+  fpsPanel.textContent = 'FPS: --';
+  document.body.appendChild(fpsPanel);
+}
+
 // --- Game state --------------------------------------------------------------
 const player = createPlayer(scene);
 const maxHp = () => player.maxHp ?? playerHP;
@@ -479,12 +494,27 @@ function update(dt) {
 }
 
 const clock = new THREE.Clock();
+let fpsAccumulator = 0;
+let fpsFrames = 0;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);   // a tab switch must not teleport the world
   if (state === 'playing') update(dt);
   updateFX(dt);
   updateCamera(dt);
   renderer.render(scene, camera);
+
+  if (fpsPanel) {
+    fpsAccumulator += dt;
+    fpsFrames += 1;
+    if (fpsAccumulator >= 0.5) {
+      const fps = Math.round(fpsFrames / fpsAccumulator);
+      const tris = renderer.info.render.triangles;
+      const calls = renderer.info.render.calls;
+      fpsPanel.textContent = `FPS: ${fps}  calls: ${calls}  tris: ${tris}`;
+      fpsAccumulator = 0;
+      fpsFrames = 0;
+    }
+  }
 });
 
 createColumns(scene, columnCount);
