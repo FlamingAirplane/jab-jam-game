@@ -348,22 +348,26 @@ function resolveColumnCollisions(position, radius) {
 
 function separateEnemies() {
   const enemies = getEnemies();
-  for (let i = 0; i < enemies.length; i++) {
-    const a = enemies[i];
-    if (!alive(a)) continue;
-    for (let j = i + 1; j < enemies.length; j++) {
-      const b = enemies[j];
-      if (!alive(b)) continue;
-      const dx = b.mesh.position.x - a.mesh.position.x;
-      const dz = b.mesh.position.z - a.mesh.position.z;
-      const dist = Math.hypot(dx, dz);
-      const minDist = (a.radius ?? enemyRadius) + (b.radius ?? enemyRadius);
-      if (dist < minDist && dist > 0.001) {
-        const push = (minDist - dist) / dist * 0.5;
-        a.mesh.position.x -= dx * push;
-        a.mesh.position.z -= dz * push;
-        b.mesh.position.x += dx * push;
-        b.mesh.position.z += dz * push;
+  // Run a couple of iterations so large clumps unpack in a single frame.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < enemies.length; i++) {
+      const a = enemies[i];
+      if (!alive(a)) continue;
+      for (let j = i + 1; j < enemies.length; j++) {
+        const b = enemies[j];
+        if (!alive(b)) continue;
+        const dx = b.mesh.position.x - a.mesh.position.x;
+        const dz = b.mesh.position.z - a.mesh.position.z;
+        const dist = Math.hypot(dx, dz);
+        // Keep enemies slightly farther apart than their physical radii so they fan out.
+        const minDist = ((a.radius ?? enemyRadius) + (b.radius ?? enemyRadius)) * 1.3;
+        if (dist < minDist && dist > 0.001) {
+          const push = (minDist - dist) / dist * 0.55;
+          a.mesh.position.x -= dx * push;
+          a.mesh.position.z -= dz * push;
+          b.mesh.position.x += dx * push;
+          b.mesh.position.z += dz * push;
+        }
       }
     }
   }
