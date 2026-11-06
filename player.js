@@ -121,8 +121,8 @@ export function updatePlayer(player, dt, ctx) {
   const screenUp = new THREE.Vector3().crossVectors(screenRight, new THREE.Vector3(0, 1, 0)).normalize();
 
   moveStep.set(0, 0, 0);
-  if (held(keys, 'KeyW', 'w')) moveStep.add(screenUp);
-  if (held(keys, 'KeyS', 's')) moveStep.sub(screenUp);
+  if (held(keys, 'KeyW', 'w')) moveStep.sub(screenUp);
+  if (held(keys, 'KeyS', 's')) moveStep.add(screenUp);
   if (held(keys, 'KeyD', 'd')) moveStep.add(screenRight);
   if (held(keys, 'KeyA', 'a')) moveStep.sub(screenRight);
   if (moveStep.lengthSq() > 0) {
