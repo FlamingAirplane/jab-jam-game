@@ -55,17 +55,43 @@ function createMosaicTexture() {
   canvas.width = size;
   canvas.height = size;
   const ctx2d = canvas.getContext('2d');
-  const greys = ['#595959', '#7f7f7f', '#a5a5a5'];
+  const greys = ['#595959', '#6e6e6e', '#7f7f7f', '#8f8f8f', '#a5a5a5'];
+
+  // Base fill.
+  ctx2d.fillStyle = '#555555';
+  ctx2d.fillRect(0, 0, size, size);
+
+  // Random-sized mosaic tiles.
   const tile = 32;
   for (let y = 0; y < size; y += tile) {
     for (let x = 0; x < size; x += tile) {
-      ctx2d.fillStyle = greys[Math.floor(Math.random() * greys.length)];
-      ctx2d.fillRect(x, y, tile, tile);
-      ctx2d.strokeStyle = '#4a4a4a';
+      const shade = greys[Math.floor(Math.random() * greys.length)];
+      ctx2d.fillStyle = shade;
+      ctx2d.fillRect(x + 1, y + 1, tile - 2, tile - 2);
+
+      // Occasional smaller inset tile.
+      if (Math.random() < 0.25) {
+        ctx2d.fillStyle = greys[Math.floor(Math.random() * greys.length)];
+        const inset = tile * 0.25;
+        ctx2d.fillRect(x + inset, y + inset, tile - inset * 2, tile - inset * 2);
+      }
+
+      // Dark grout / cracks.
+      ctx2d.strokeStyle = '#3a3a3a';
       ctx2d.lineWidth = 1;
       ctx2d.strokeRect(x, y, tile, tile);
+
+      // Random crack line.
+      if (Math.random() < 0.08) {
+        ctx2d.beginPath();
+        ctx2d.moveTo(x + Math.random() * tile, y + Math.random() * tile);
+        ctx2d.lineTo(x + Math.random() * tile, y + Math.random() * tile);
+        ctx2d.strokeStyle = '#2a2a2a';
+        ctx2d.stroke();
+      }
     }
   }
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;

@@ -25,7 +25,7 @@ import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js?v=2'
 import { playShoot } from './audio.js?v=2';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const GOLEM_COLOR = '#c6cbd0';
+const GOLEM_COLOR = '#8e9196';
 const PROJECTILE_COLOR = '#f1f2f4';
 
 // Module state: the game has one golem and one projectile list at a time.
@@ -141,10 +141,13 @@ export function createPlayer(scene) {
 
 export function setElement(player, type) {
   player.element = type;
-  const color = new THREE.Color(elementColors[type] ?? GOLEM_COLOR);
+  const glow = new THREE.Color(elementColors[type] ?? GOLEM_COLOR);
+  const base = new THREE.Color(GOLEM_COLOR);
   player.group.traverse((child) => {
     if (child.isMesh && child.material) {
-      child.material.color.copy(color);
+      child.material.color.copy(base);
+      child.material.emissive.copy(glow);
+      child.material.emissiveIntensity = 0.55;
     }
   });
 }

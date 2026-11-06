@@ -2,15 +2,16 @@
 import * as THREE from 'three';
 import { enemySpeed, enemyHP, enemyRadius, arenaSize } from './tuning.js';
 
-const ENEMY_COLOR = '#5a5a5a';
+const ENEMY_COLOR = '#4a4a4a';
 const enemies = []; // [{ mesh, hp, alive, radius }]
 let enemyGeometry = null; // one shared shape, made on the first spawn
 
-// A jagged floating shard — a tall pyramid with its base on the floor.
+// A dark jagged crystal shard — floating, angular, menacing.
 function getEnemyGeometry() {
   if (!enemyGeometry) {
-    enemyGeometry = new THREE.ConeGeometry(enemyRadius, enemyRadius * 2.4, 4);
-    enemyGeometry.translate(0, enemyRadius * 1.2, 0);
+    enemyGeometry = new THREE.IcosahedronGeometry(enemyRadius * 0.9, 0);
+    enemyGeometry.scale(1, 1.6, 1);
+    enemyGeometry.translate(0, enemyRadius * 0.9, 0);
   }
   return enemyGeometry;
 }
@@ -18,10 +19,11 @@ function getEnemyGeometry() {
 export function spawnEnemyAt(scene, position) {
   const mesh = new THREE.Mesh(
     getEnemyGeometry(),
-    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR, roughness: 0.9, flatShading: true })
+    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR, roughness: 0.9, metalness: 0.2, flatShading: true })
   );
   mesh.position.copy(position);
   mesh.position.y = 0;
+  mesh.rotation.y = Math.random() * Math.PI;
   scene.add(mesh);
   enemies.push({ mesh, hp: enemyHP, alive: true, radius: enemyRadius });
   return enemies[enemies.length - 1];
