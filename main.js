@@ -17,7 +17,7 @@ import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
 import {
   spawnEnemyAt, updateEnemies, getEnemies, clearEnemies,
   updateEnemyProjectiles, getEnemyProjectiles, clearEnemyProjectiles,
-} from './enemies.js?v=3';
+} from './enemies.js?v=4';
 import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=2';
 import { playHit, playDeath, playAbsorb, resumeAudio, startMusic, toggleMusic, isMusicMuted } from './audio.js?v=3';
 import { buildMap } from './level.js?v=4';
@@ -250,7 +250,7 @@ function attachHealthBars() {
   for (const enemy of getEnemies()) {
     if (!enemy.healthBar) {
       enemy.healthBar = createEnemyHealthBar();
-      enemy.healthBar.setHp(enemy.hp, enemyHP);
+      enemy.healthBar.setHp(enemy.hp, enemy.maxHp ?? enemyHP);
     }
   }
 }
@@ -444,7 +444,7 @@ function blockProjectiles() {
   }
   for (const shot of getEnemyProjectiles()) {
     if (!alive(shot)) continue;
-    if (projectileHitsWall(shot.mesh.position, archerProjectileRadius)) {
+    if (projectileHitsWall(shot.mesh.position, shot.radius ?? archerProjectileRadius)) {
       shot.alive = false;
       if (shot.mesh.parent) shot.mesh.parent.remove(shot.mesh);
     }
@@ -460,7 +460,7 @@ function hitEnemies() {
       const reach = projectileRadius + (enemy.radius ?? enemyRadius);
       if (distanceXZ(shot.mesh.position, enemy.mesh.position) < reach) {
         enemy.hp -= shot.damage ?? projectileDamage;
-        if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemyHP);
+        if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemy.maxHp ?? enemyHP);
         if (shot.pierce !== undefined) {
           shot.pierce -= 1;
           if (shot.pierce <= 0) {
@@ -494,7 +494,8 @@ function hitPlayer() {
   const playerPos = player.group.position;
   for (const shot of getEnemyProjectiles()) {
     if (!alive(shot)) continue;
-    if (distanceXZ(shot.mesh.position, playerPos) < archerProjectileRadius + playerRadius) {
+    const radius = shot.radius ?? archerProjectileRadius;
+    if (distanceXZ(shot.mesh.position, playerPos) < radius + playerRadius) {
       player.hp -= shot.damage ?? archerProjectileDamage;
       shot.alive = false;
       if (shot.mesh.parent) shot.mesh.parent.remove(shot.mesh);

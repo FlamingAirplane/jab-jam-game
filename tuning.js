@@ -22,7 +22,12 @@ export const contactPushDistance = 1.2;   // how far the player is knocked back 
 export const contactPushEnemy = 0.6;      // how far the enemy is knocked back on contact
 
 // Enemy roles
-export const enemyRoleWeights = { brawler: 0.7, archer: 0.3 };
+export const enemyRoleWeights = { brawler: 0.55, archer: 0.25, mage: 0.2 };
+export const brawlerModelScale = 1.0;   // scale for Flow Studio fire/earth brawler models
+export const archerModelScale = 1.0;    // scale for Flow Studio water archer model
+export const mageModelScale = 1.1;      // scale for Flow Studio water mage model
+
+// Archer
 export const archerSpeed = 2.8;
 export const archerPreferredRange = 18;   // tries to stay this far from the golem
 export const archerRangeTolerance = 4;    // within this band it stops backing up
@@ -31,8 +36,25 @@ export const archerProjectileSpeed = 22;
 export const archerProjectileDamage = 8;
 export const archerProjectileRadius = 0.3;
 export const archerProjectileRange = 35;
-export const brawlerModelScale = 1.0;   // scale for Flow Studio fire/earth brawler models
-export const archerModelScale = 1.0;    // scale for Flow Studio water archer model
+
+// Mage
+export const mageSpeed = 2.4;
+export const magePreferredRange = 22;     // hangs back farther than archers
+export const mageRangeTolerance = 5;
+export const mageFireRate = 0.7;          // slower, heavier shots
+export const mageProjectileSpeed = 16;
+export const mageProjectileDamage = 15;
+export const mageProjectileRadius = 0.7;
+export const mageProjectileRange = 30;
+export const mageBlastRadius = 4;         // splash radius on hit (visual + damage)
+
+// Enemy personalities
+export const personalityWeights = { grunt: 0.5, leader: 0.15, hero: 0.15, coward: 0.2 };
+export const leaderAuraRadius = 12;       // nearby allies are spurred on
+export const leaderSpeedMul = 1.25;
+export const heroHpMul = 1.5;
+export const heroSpeedMul = 1.3;
+export const cowardFleeHpRatio = 0.4;     // below this HP a coward runs away
 export const arrowTurnSpeed = 4.0;      // radians per second when rotating with arrow keys
 
 // Waves
