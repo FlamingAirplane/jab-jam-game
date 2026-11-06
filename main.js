@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
-  enemyHP,
+  enemyHP, enemyRadius,
   contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
   screenShakeAmount, screenShakeDecay, elementColors,
