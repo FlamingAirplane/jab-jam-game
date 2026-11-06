@@ -24,6 +24,13 @@ export const spawnInterval = 2.5;    // seconds of quiet before the next wave
 export const waveSize = 8;           // enemies in wave 1
 export const waveGrowth = 4;         // extra enemies per floor (used from M2)
 
+// Spawning
+export const spawnMargin = 5;          // extra distance outside the camera view to spawn
+export const minSpawnDistance = 28;    // minimum distance from player to spawn
+export const spawnIndicatorSize = 16;  // px
+export const spawnIndicatorDuration = 1.5; // seconds the arrow stays on screen
+export const spawnIndicatorColor = '#f2f2f2';
+
 // Floor — 4x larger area: half-extent doubled from 20 to 40
 export const arenaSize = 40;
 
@@ -57,6 +64,12 @@ export const elementFireRateMul = {
   fire: 1.0,     // fast
   water: 0.8,    // steady
   earth: 0.55,   // slow, heavy shots
+};
+
+export const elementRotationSpeedMul = {
+  fire: 1.2,     // snappy
+  water: 1.0,    // normal
+  earth: 0.6,    // heavy and slow to turn
 };
 
 // FX timing

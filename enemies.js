@@ -16,25 +16,30 @@ function getEnemyGeometry() {
   return enemyGeometry;
 }
 
-export function spawnWave(scene, count) {
-  const geometry = getEnemyGeometry();
-  for (let i = 0; i < count; i++) {
-    const mesh = new THREE.Mesh(
-      geometry,
-      new THREE.MeshStandardMaterial({ color: ENEMY_COLOR })
-    );
+export function spawnEnemyAt(scene, position) {
+  const mesh = new THREE.Mesh(
+    getEnemyGeometry(),
+    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR })
+  );
+  mesh.position.copy(position);
+  mesh.position.y = 0;
+  scene.add(mesh);
+  enemies.push({ mesh, hp: enemyHP, alive: true, radius: enemyRadius });
+  return enemies[enemies.length - 1];
+}
 
+export function spawnWave(scene, count) {
+  for (let i = 0; i < count; i++) {
     // Pick one of the four edges, then a spot along it, just inside the arena.
     const edge = Math.floor(Math.random() * 4);
     const along = (Math.random() * 2 - 1) * arenaSize;
     const inset = arenaSize * (0.92 + Math.random() * 0.06);
-    if (edge === 0) mesh.position.set(along, 0, -inset);
-    else if (edge === 1) mesh.position.set(along, 0, inset);
-    else if (edge === 2) mesh.position.set(-inset, 0, along);
-    else mesh.position.set(inset, 0, along);
-
-    scene.add(mesh);
-    enemies.push({ mesh, hp: enemyHP, alive: true, radius: enemyRadius });
+    const position = new THREE.Vector3();
+    if (edge === 0) position.set(along, 0, -inset);
+    else if (edge === 1) position.set(along, 0, inset);
+    else if (edge === 2) position.set(-inset, 0, along);
+    else position.set(inset, 0, along);
+    spawnEnemyAt(scene, position);
   }
 }
 

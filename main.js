@@ -2,17 +2,20 @@
 import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
-  enemyHP, enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
+  enemyHP,
+  contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
   cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
   screenShakeAmount, screenShakeDecay, elementColors,
+  spawnMargin, minSpawnDistance, spawnIndicatorDuration,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js';
-import { spawnWave, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
+import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
 import { spawnElementFields, getElementFields, clearElementFields } from './elements.js';
 import {
   createUI, setScore, setFloor, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
+  createSpawnIndicator, positionSpawnIndicator,
 } from './ui.js';
 
 // --- Overlay -----------------------------------------------------------------
@@ -105,6 +108,7 @@ let contactTimer = 0;
 let waveTimer = 0;
 let shownHp = null;
 let screenShake = 0;
+const activeSpawnIndicators = [];
 
 const alive = (thing) => thing.alive !== false;   // treat a missing flag as alive
 const liveEnemies = () => getEnemies().filter(alive).length;
@@ -119,7 +123,51 @@ function attachHealthBars() {
   }
 }
 
+function clearSpawnIndicators() {
+  for (const ind of activeSpawnIndicators) ind.remove();
+  activeSpawnIndicators.length = 0;
+}
+
+function addSpawnIndicator(spawnPos) {
+  const ind = createSpawnIndicator();
+  positionSpawnIndicator(ind.element, spawnPos, camera, renderer);
+  activeSpawnIndicators.push(ind);
+  setTimeout(() => {
+    ind.remove();
+    const i = activeSpawnIndicators.indexOf(ind);
+    if (i >= 0) activeSpawnIndicators.splice(i, 1);
+  }, spawnIndicatorDuration * 1000);
+}
+
+function spawnWaveCustom(scene, count) {
+  const playerPos = player.group.position;
+  const camDir = new THREE.Vector3();
+  camera.getWorldDirection(camDir);
+  camDir.y = 0;
+  if (camDir.lengthSq() > 0) camDir.normalize();
+  const behind = camDir.clone().negate();
+  const perp = new THREE.Vector3(-camDir.z, 0, camDir.x);
+
+  const spawnDistance = minSpawnDistance + spawnMargin;
+  const spread = minSpawnDistance * 0.6;
+
+  for (let i = 0; i < count; i++) {
+    const lateral = (Math.random() * 2 - 1) * spread;
+    const spawnPos = new THREE.Vector3()
+      .copy(playerPos)
+      .addScaledVector(behind, spawnDistance)
+      .addScaledVector(perp, lateral);
+    spawnPos.x = Math.max(-arenaSize, Math.min(arenaSize, spawnPos.x));
+    spawnPos.z = Math.max(-arenaSize, Math.min(arenaSize, spawnPos.z));
+    spawnPos.y = 0;
+
+    spawnEnemyAt(scene, spawnPos);
+    addSpawnIndicator(spawnPos);
+  }
+}
+
 function restart() {
+  clearSpawnIndicators();
   clearEnemyHealthBars();
   for (const enemy of getEnemies()) if (enemy.mesh) scene.remove(enemy.mesh);   // don't trust clearEnemies to un-draw them
   clearEnemies();
@@ -140,7 +188,7 @@ function restart() {
   waveTimer = spawnInterval;
   shownHp = player.hp;
   setMouseDown(false);
-  spawnWave(scene, waveSize);
+  spawnWaveCustom(scene, waveSize);
   attachHealthBars();
   spawnElementFields(scene, elementFieldCount);
   setScore(score);
@@ -270,7 +318,7 @@ function update(dt) {
     waveTimer -= dt;
     if (waveTimer <= 0) {
       floor += 1;
-      spawnWave(scene, waveSize + (floor - 1) * waveGrowth);
+      spawnWaveCustom(scene, waveSize + (floor - 1) * waveGrowth);
       attachHealthBars();
       clearElementFields();
       spawnElementFields(scene, elementFieldCount + Math.floor(floor / 2));
@@ -296,7 +344,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
-spawnWave(scene, waveSize);
+spawnWaveCustom(scene, waveSize);
 attachHealthBars();
 waveTimer = spawnInterval;
 spawnElementFields(scene, elementFieldCount);

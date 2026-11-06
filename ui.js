@@ -2,6 +2,7 @@
 import {
   enemyHealthBarWidth, enemyHealthBarHeight, enemyHealthBarYOffset,
   enemyHealthBarColor, enemyHealthBarBg,
+  spawnIndicatorSize, spawnIndicatorColor,
 } from './tuning.js';
 
 const GREY = { dark: '#595959', mid: '#7f7f7f', light: '#a5a5a5', pale: '#cccccc', white: '#f2f2f2' };
@@ -165,4 +166,58 @@ export function clearEnemyHealthBars() {
     if (bar.parentNode) bar.parentNode.removeChild(bar);
   }
   enemyBars.length = 0;
+}
+
+// --- Spawn indicators --------------------------------------------------------
+export function createSpawnIndicator() {
+  const element = document.createElement('div');
+  const half = spawnIndicatorSize / 2;
+  Object.assign(element.style, {
+    position: 'absolute',
+    pointerEvents: 'none',
+    width: '0',
+    height: '0',
+    borderTop: `${half}px solid transparent`,
+    borderBottom: `${half}px solid transparent`,
+    borderLeft: `${spawnIndicatorSize}px solid ${spawnIndicatorColor}`,
+  });
+  document.body.appendChild(element);
+
+  return {
+    element,
+    remove() {
+      if (element.parentNode) element.parentNode.removeChild(element);
+    },
+  };
+}
+
+export function positionSpawnIndicator(element, worldPos, camera, renderer) {
+  const ndc = worldPos.clone().project(camera);
+  const canvas = renderer.domElement;
+
+  // If the point is behind the camera, mirror it so the indicator lands on the opposite edge.
+  const behind = ndc.z > 1;
+  const rawX = behind ? -ndc.x : ndc.x;
+  const rawY = behind ? -ndc.y : ndc.y;
+
+  // On-screen spawns don't need an arrow.
+  if (!behind && Math.abs(rawX) < 1 && Math.abs(rawY) < 1) {
+    element.style.display = 'none';
+    return;
+  }
+
+  const clampedX = Math.max(-0.95, Math.min(0.95, rawX));
+  const clampedY = Math.max(-0.95, Math.min(0.95, rawY));
+
+  const screenX = (clampedX * 0.5 + 0.5) * canvas.clientWidth;
+  const screenY = (1 - (clampedY * 0.5 + 0.5)) * canvas.clientHeight;
+
+  const rawScreenX = (rawX * 0.5 + 0.5) * canvas.clientWidth;
+  const rawScreenY = (1 - (rawY * 0.5 + 0.5)) * canvas.clientHeight;
+  const angle = Math.atan2(rawScreenY - screenY, rawScreenX - screenX) * (180 / Math.PI);
+
+  element.style.display = 'block';
+  element.style.left = `${screenX}px`;
+  element.style.top = `${screenY}px`;
+  element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
 }

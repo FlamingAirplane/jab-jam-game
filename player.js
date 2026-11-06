@@ -18,6 +18,7 @@ import {
   waterPierceCount,
   elementMoveSpeedMul,
   elementFireRateMul,
+  elementRotationSpeedMul,
   trailSpawnInterval,
 } from './tuning.js';
 import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js';
@@ -60,6 +61,13 @@ function firing(ctx) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function lerpAngle(current, target, t) {
+  let diff = target - current;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  return current + diff * Math.min(1, t);
 }
 
 export function createPlayer(scene) {
@@ -131,14 +139,16 @@ export function updatePlayer(player, dt, ctx) {
     position.z = clamp(position.z + moveStep.z, -arenaSize, arenaSize);
   }
 
-  // Aim: shoot the mouse ray at the floor plane and face that spot.
+  // Aim: shoot the mouse ray at the floor plane and turn toward that spot.
   raycaster.setFromCamera(ctx.mouseNDC, ctx.camera);
   if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
     const dx = hitPoint.x - position.x;
     const dz = hitPoint.z - position.z;
     if (dx !== 0 || dz !== 0) {
       player.facing.set(dx, 0, dz).normalize();
-      player.group.rotation.y = Math.atan2(player.facing.x, player.facing.z);
+      const targetAngle = Math.atan2(player.facing.x, player.facing.z);
+      const turnSpeed = 12 * elementRotationSpeedMul[player.element] * dt;
+      player.group.rotation.y = lerpAngle(player.group.rotation.y, targetAngle, turnSpeed);
     }
   }
 
