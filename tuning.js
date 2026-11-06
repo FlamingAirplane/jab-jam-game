@@ -21,6 +21,17 @@ export const contactCooldown = 0.8;  // seconds between contact hits on the gole
 export const contactPushDistance = 1.2;   // how far the player is knocked back on contact
 export const contactPushEnemy = 0.6;      // how far the enemy is knocked back on contact
 
+// Enemy roles
+export const enemyRoleWeights = { brawler: 0.7, archer: 0.3 };
+export const archerSpeed = 2.8;
+export const archerPreferredRange = 18;   // tries to stay this far from the golem
+export const archerRangeTolerance = 4;    // within this band it stops backing up
+export const archerFireRate = 1.2;        // shots per second
+export const archerProjectileSpeed = 22;
+export const archerProjectileDamage = 8;
+export const archerProjectileRadius = 0.3;
+export const archerProjectileRange = 35;
+
 // Waves
 export const spawnInterval = 2.5;    // seconds of quiet before the next wave
 export const waveSize = 8;           // enemies in wave 1

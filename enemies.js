@@ -1,37 +1,71 @@
-// Enemy boxes: spawn a wave just inside the arena edge, then walk straight at the golem.
+// Enemy roles: brawlers rush and melee, archers keep distance and shoot.
 import * as THREE from 'three';
-import { enemySpeed, enemyHP, enemyRadius, arenaSize } from './tuning.js';
+import {
+  enemySpeed, enemyHP, enemyRadius, arenaSize,
+  enemyRoleWeights, archerSpeed, archerPreferredRange, archerRangeTolerance,
+  archerFireRate, archerProjectileSpeed, archerProjectileDamage,
+  archerProjectileRadius, archerProjectileRange,
+} from './tuning.js';
 
-const ENEMY_COLOR = '#4a4a4a';
-const enemies = []; // [{ mesh, hp, alive, radius }]
-let enemyGeometry = null; // one shared shape, made on the first spawn
+const BRAWLER_COLOR = '#4a4a4a';
+const ARCHER_COLOR = '#6a5a4a';
+const enemies = [];
+const enemyProjectiles = [];
+let shotScene = null;
+let brawlerGeometry = null;
+let archerGeometry = null;
+let enemyProjectileGeometry = null;
 
-// A dark jagged crystal shard — floating, angular, menacing.
-function getEnemyGeometry() {
-  if (!enemyGeometry) {
-    enemyGeometry = new THREE.IcosahedronGeometry(enemyRadius * 0.9, 0);
-    enemyGeometry.scale(1, 1.6, 1);
-    enemyGeometry.translate(0, enemyRadius * 0.9, 0);
-  }
-  return enemyGeometry;
+function pickRole() {
+  const roll = Math.random();
+  return roll < enemyRoleWeights.brawler ? 'brawler' : 'archer';
 }
 
-export function spawnEnemyAt(scene, position) {
+function getBrawlerGeometry() {
+  if (!brawlerGeometry) {
+    brawlerGeometry = new THREE.IcosahedronGeometry(enemyRadius * 0.9, 0);
+    brawlerGeometry.scale(1, 1.6, 1);
+    brawlerGeometry.translate(0, enemyRadius * 0.9, 0);
+  }
+  return brawlerGeometry;
+}
+
+function getArcherGeometry() {
+  if (!archerGeometry) {
+    // A narrower, taller shard for archers.
+    archerGeometry = new THREE.ConeGeometry(enemyRadius * 0.7, enemyRadius * 2.6, 5);
+    archerGeometry.translate(0, enemyRadius * 1.3, 0);
+  }
+  return archerGeometry;
+}
+
+export function spawnEnemyAt(scene, position, role = null) {
+  shotScene = scene;
+  const chosenRole = role ?? pickRole();
+  const isArcher = chosenRole === 'archer';
+  const geometry = isArcher ? getArcherGeometry() : getBrawlerGeometry();
+  const color = isArcher ? ARCHER_COLOR : BRAWLER_COLOR;
   const mesh = new THREE.Mesh(
-    getEnemyGeometry(),
-    new THREE.MeshStandardMaterial({ color: ENEMY_COLOR, roughness: 0.9, metalness: 0.2, flatShading: true })
+    geometry,
+    new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0.2, flatShading: true })
   );
   mesh.position.copy(position);
   mesh.position.y = 0;
   mesh.rotation.y = Math.random() * Math.PI;
   scene.add(mesh);
-  enemies.push({ mesh, hp: enemyHP, alive: true, radius: enemyRadius });
+  enemies.push({
+    mesh,
+    hp: enemyHP,
+    alive: true,
+    radius: enemyRadius,
+    role: chosenRole,
+    fireTimer: Math.random() * (1 / archerFireRate),
+  });
   return enemies[enemies.length - 1];
 }
 
 export function spawnWave(scene, count) {
   for (let i = 0; i < count; i++) {
-    // Pick one of the four edges, then a spot along it, just inside the arena.
     const edge = Math.floor(Math.random() * 4);
     const along = (Math.random() * 2 - 1) * arenaSize;
     const inset = arenaSize * (0.92 + Math.random() * 0.06);
@@ -44,8 +78,54 @@ export function spawnWave(scene, count) {
   }
 }
 
+function spawnEnemyProjectile(position, direction) {
+  if (!enemyProjectileGeometry) {
+    enemyProjectileGeometry = new THREE.SphereGeometry(archerProjectileRadius, 8, 6);
+  }
+  const material = new THREE.MeshBasicMaterial({ color: '#f2a65a' });
+  const mesh = new THREE.Mesh(enemyProjectileGeometry, material);
+  mesh.position.copy(position);
+  mesh.position.y = enemyRadius;
+  if (shotScene) shotScene.add(mesh);
+  enemyProjectiles.push({
+    mesh,
+    dir: direction.clone().normalize(),
+    alive: true,
+    traveled: 0,
+    damage: archerProjectileDamage,
+  });
+}
+
+export function updateEnemyProjectiles(dt) {
+  // Clean up dead projectiles.
+  for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+    if (enemyProjectiles[i].alive) continue;
+    const mesh = enemyProjectiles[i].mesh;
+    if (mesh.parent) mesh.parent.remove(mesh);
+    enemyProjectiles.splice(i, 1);
+  }
+
+  for (const shot of enemyProjectiles) {
+    const step = archerProjectileSpeed * dt;
+    shot.mesh.position.addScaledVector(shot.dir, step);
+    shot.traveled += step;
+    if (shot.traveled >= archerProjectileRange) shot.alive = false;
+  }
+}
+
+export function getEnemyProjectiles() {
+  return enemyProjectiles;
+}
+
+export function clearEnemyProjectiles() {
+  for (const shot of enemyProjectiles) {
+    if (shot.mesh.parent) shot.mesh.parent.remove(shot.mesh);
+  }
+  enemyProjectiles.length = 0;
+}
+
 export function updateEnemies(dt, targetPos) {
-  // Drop the ones killed last frame first, in place: the caller holds this exact array.
+  // Drop the ones killed last frame first, in place.
   for (let i = enemies.length - 1; i >= 0; i--) {
     if (enemies[i].alive) continue;
     const mesh = enemies[i].mesh;
@@ -53,18 +133,53 @@ export function updateEnemies(dt, targetPos) {
     enemies.splice(i, 1);
   }
 
-  const step = enemySpeed * dt;
   for (const enemy of enemies) {
     const position = enemy.mesh.position;
     const dx = targetPos.x - position.x;
     const dz = targetPos.z - position.z;
     const distance = Math.hypot(dx, dz);
-    if (distance > 1e-4) {
-      const travel = Math.min(step, distance); // don't overshoot the golem
-      position.x += (dx / distance) * travel;
-      position.z += (dz / distance) * travel;
+
+    if (enemy.role === 'archer') {
+      // Archers try to keep their preferred range.
+      const tooClose = distance < archerPreferredRange - archerRangeTolerance;
+      const tooFar = distance > archerPreferredRange + archerRangeTolerance;
+      let moveDirX = 0;
+      let moveDirZ = 0;
+      if (tooClose) {
+        // Back away from the golem.
+        moveDirX = -dx / distance;
+        moveDirZ = -dz / distance;
+      } else if (tooFar) {
+        // Approach to firing range.
+        moveDirX = dx / distance;
+        moveDirZ = dz / distance;
+      } else {
+        // Strafe sideways to avoid stacking.
+        moveDirX = dz / distance;
+        moveDirZ = -dx / distance;
+      }
+      const step = archerSpeed * dt;
+      position.x += moveDirX * step;
+      position.z += moveDirZ * step;
+
+      // Fire when roughly in range.
+      enemy.fireTimer -= dt;
+      if (enemy.fireTimer <= 0 && distance < archerPreferredRange + archerRangeTolerance * 2 && distance > 1) {
+        const dir = new THREE.Vector3(dx / distance, 0, dz / distance);
+        spawnEnemyProjectile(position.clone().add(new THREE.Vector3(0, enemyRadius, 0)), dir);
+        enemy.fireTimer = 1 / archerFireRate + Math.random() * 0.2;
+      }
+    } else {
+      // Brawler: rush straight at the golem.
+      const step = enemySpeed * dt;
+      if (distance > 1e-4) {
+        const travel = Math.min(step, distance);
+        position.x += (dx / distance) * travel;
+        position.z += (dz / distance) * travel;
+      }
     }
-    position.y = 0; // keep the meshes on the floor
+
+    position.y = 0;
   }
 }
 

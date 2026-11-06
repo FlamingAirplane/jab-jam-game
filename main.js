@@ -12,10 +12,14 @@ import {
   wallHeight, wallThickness,
   internalWallCount, internalWallLength, internalWallThickness,
   enemyElementDropChance,
+  archerProjectileRadius, archerProjectileDamage,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js?v=2';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
-import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js?v=2';
+import {
+  spawnEnemyAt, updateEnemies, getEnemies, clearEnemies,
+  updateEnemyProjectiles, getEnemyProjectiles, clearEnemyProjectiles,
+} from './enemies.js?v=2';
 import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=2';
 import { playHit, playDeath, playAbsorb, resumeAudio } from './audio.js?v=2';
 import {
@@ -412,6 +416,7 @@ function restart() {
   }
   clearElementFields();
   clearColumns();
+  clearEnemyProjectiles();
   clearFX();
   screenShake = 0;
   player.hp = maxHp();
@@ -498,6 +503,20 @@ function hitEnemies() {
   }
 }
 
+function hitPlayer() {
+  const playerPos = player.group.position;
+  for (const shot of getEnemyProjectiles()) {
+    if (!alive(shot)) continue;
+    if (distanceXZ(shot.mesh.position, playerPos) < archerProjectileRadius + playerRadius) {
+      player.hp -= shot.damage ?? archerProjectileDamage;
+      shot.alive = false;
+      if (shot.mesh.parent) shot.mesh.parent.remove(shot.mesh);
+      screenShake += screenShakeAmount * 0.5;
+      break;
+    }
+  }
+}
+
 function touchDamage(dt) {
   contactTimer -= dt;
   for (const enemy of getEnemies()) {
@@ -565,7 +584,9 @@ function update(dt) {
   resolveWallCollisions(player.group.position, playerRadius);
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
+  updateEnemyProjectiles(dt);
   separateEnemies();
+  hitPlayer(dt);
 
   for (const enemy of getEnemies()) {
     if (alive(enemy)) {
