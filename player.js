@@ -105,12 +105,20 @@ export function updatePlayer(player, dt, ctx) {
   const keys = ctx.keys;
   const position = player.group.position;
 
-  // Walk: normalised so moving diagonally isn't faster, then clamped to the arena.
+  // Walk: camera-relative, so WASD matches what the player sees on screen.
+  // W = away from camera, S = toward camera, A = left, D = right.
+  const cam = ctx.camera;
+  const forward = new THREE.Vector3();
+  cam.getWorldDirection(forward);
+  forward.y = 0;
+  forward.normalize();
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
+
   moveStep.set(0, 0, 0);
-  if (held(keys, 'KeyW', 'w')) moveStep.z -= 1;
-  if (held(keys, 'KeyS', 's')) moveStep.z += 1;
-  if (held(keys, 'KeyA', 'a')) moveStep.x -= 1;
-  if (held(keys, 'KeyD', 'd')) moveStep.x += 1;
+  if (held(keys, 'KeyW', 'w')) moveStep.add(forward);
+  if (held(keys, 'KeyS', 's')) moveStep.sub(forward);
+  if (held(keys, 'KeyD', 'd')) moveStep.add(right);
+  if (held(keys, 'KeyA', 'a')) moveStep.sub(right);
   if (moveStep.lengthSq() > 0) {
     moveStep.normalize().multiplyScalar(moveSpeed * dt);
     position.x = clamp(position.x + moveStep.x, -arenaSize, arenaSize);
