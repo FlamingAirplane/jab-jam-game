@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   arenaSize, playerHP, playerRadius, projectileRadius, projectileDamage,
   enemyRadius, contactDamage, contactCooldown, spawnInterval, waveSize, waveGrowth,
-  cameraHeight, cameraDistance, cameraFollowSpeed, elementFieldCount,
+  cameraHeight, cameraDistance, cameraFollowSpeed, cameraAngle, elementFieldCount,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
 import { spawnWave, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
@@ -17,9 +17,13 @@ const ui = createUI();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#595959');
 
-// Isometric-ish top-down: high above and behind the floor, aimed at the golem.
+// Isometric-ish top-down: 45 degrees around the golem, zoomed in, aimed at the golem.
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 500);
-camera.position.set(0, cameraHeight, cameraDistance);
+camera.position.set(
+  cameraDistance * Math.sin(cameraAngle),
+  cameraHeight,
+  cameraDistance * Math.cos(cameraAngle)
+);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -192,7 +196,11 @@ const currentCameraPos = camera.position.clone();
 
 function updateCamera(dt) {
   const p = player.group.position;
-  targetCameraPos.set(p.x, p.y + cameraHeight, p.z + cameraDistance);
+  targetCameraPos.set(
+    p.x + cameraDistance * Math.sin(cameraAngle),
+    p.y + cameraHeight,
+    p.z + cameraDistance * Math.cos(cameraAngle)
+  );
   const t = Math.min(1, cameraFollowSpeed * dt);
   currentCameraPos.lerp(targetCameraPos, t);
   camera.position.copy(currentCameraPos);
