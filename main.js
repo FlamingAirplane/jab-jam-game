@@ -11,15 +11,15 @@ import {
   columnCount, columnRadius, columnMinDistanceFromPlayer,
   enemyElementDropChance,
 } from './tuning.js';
-import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js';
-import { spawnHitBurst, updateFX, clearFX } from './fx.js';
-import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js';
-import { spawnElementFields, spawnElementFieldAt, getElementFields, clearElementFields } from './elements.js';
+import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js?v=2';
+import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
+import { spawnEnemyAt, updateEnemies, getEnemies, clearEnemies } from './enemies.js?v=2';
+import { spawnElementFields, spawnElementFieldAt, getElementFields, clearElementFields } from './elements.js?v=2';
 import {
   createUI, setScore, setFloor, setWave, setHealth, showGameOver, hideGameOver,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars,
   createSpawnIndicator, positionSpawnIndicator,
-} from './ui.js';
+} from './ui.js?v=2';
 
 // --- Overlay -----------------------------------------------------------------
 const ui = createUI();
