@@ -92,17 +92,9 @@ export function createPlayer(scene) {
   if (golemTemplate) {
     // Use the Blender-exported golem. Clone the scene so future restarts don't share it.
     const model = golemTemplate.scene.clone();
-    // Blender built the model with +Y as forward; after export that becomes -Z, so rotate 180 to face +Z.
-    model.rotation.y = Math.PI;
     group.add(model);
     group.position.set(0, 0, 0);
     scene.add(group);
-
-    // Lift the model so its lowest point sits on the floor instead of sliding half-buried.
-    model.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(model);
-    model.position.y += -box.min.y;
-
     representativeMesh = model;
   } else {
     // Procedural fallback: a chunky body made of boxes.

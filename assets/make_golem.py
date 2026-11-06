@@ -1,6 +1,7 @@
 import bpy
 import os
 import math
+from mathutils import Vector
 
 # Remove default cube/light/camera.
 bpy.ops.object.select_all(action='SELECT')
@@ -57,6 +58,25 @@ add_box('water_crest', (0.45, 0.2, 0.15), (0.0, 1.85, 0.0), (0.0, 0, 0))
 add_box('earth_spikeL', (0.25, 0.55, 0.25), (-0.95, 1.25, 0.0), (0.0, 0, 0.6))
 add_box('earth_spikeR', (0.25, 0.55, 0.25), (0.95, 1.25, 0.0), (0.0, 0, -0.6))
 add_box('earth_backSpike', (0.2, 0.5, 0.35), (0.0, 1.05, -0.55), (0.6, 0, 0))
+
+# Select all the golem parts and rotate the whole character so it faces +Z after export.
+bpy.ops.object.select_all(action='SELECT')
+bpy.context.scene.cursor.location = (0, 0, 0)
+bpy.ops.transform.rotate(value=math.pi, orient_axis='Z', center_override=(0, 0, 0))
+
+# Offset everything down so the lowest point of the model sits at z = 0 (the floor).
+bpy.ops.object.select_all(action='SELECT')
+min_z = float('inf')
+for obj in bpy.context.selected_objects:
+    if obj.type != 'MESH':
+        continue
+    for corner in obj.bound_box:
+        world_z = (obj.matrix_world @ Vector(corner)).z
+        if world_z < min_z:
+            min_z = world_z
+print('Lowest point before floor offset:', min_z)
+if min_z < 0:
+    bpy.ops.transform.translate(value=(0, 0, -min_z))
 
 out_path = os.path.join(os.getcwd(), 'assets', 'golem.glb')
 bpy.ops.export_scene.gltf(filepath=out_path, export_format='GLB')

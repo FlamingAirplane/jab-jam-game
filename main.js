@@ -9,6 +9,7 @@ import {
   screenShakeAmount, screenShakeDecay, elementColors,
   spawnMargin, minSpawnDistance, spawnIndicatorDuration,
   columnCount, columnRadius, columnMinDistanceFromPlayer,
+  wallHeight, wallThickness,
   enemyElementDropChance,
 } from './tuning.js';
 import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement } from './player.js?v=2';
@@ -110,6 +111,27 @@ scene.add(floorMesh);
 const grid = new THREE.GridHelper(arenaSize * 2, arenaSize, '#f2f2f2', '#a5a5a5');
 grid.position.y = 0.02;
 scene.add(grid);
+
+// --- Perimeter walls ---------------------------------------------------------
+const wallMaterial = new THREE.MeshStandardMaterial({ color: '#4a4a4a', roughness: 0.9 });
+const wallMeshes = [];
+function createWalls(scene) {
+  const half = arenaSize + wallThickness / 2;
+  const long = arenaSize * 2 + wallThickness * 2;
+  const specs = [
+    { x: 0, z: -half, w: long, d: wallThickness },
+    { x: 0, z: half, w: long, d: wallThickness },
+    { x: -half, z: 0, w: wallThickness, d: long },
+    { x: half, z: 0, w: wallThickness, d: long },
+  ];
+  for (const s of specs) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(s.w, wallHeight, s.d), wallMaterial);
+    mesh.position.set(s.x, wallHeight / 2, s.z);
+    scene.add(mesh);
+    wallMeshes.push(mesh);
+  }
+}
+createWalls(scene);
 
 // --- Input -------------------------------------------------------------------
 // Keys are held under several spellings ('Space'/'space'/' ', 'KeyW'/'keyw'/'w')
@@ -319,8 +341,31 @@ function resolveColumnCollisions(position, radius) {
       position.x += dx * push;
       position.z += dz * push;
     }
-    position.x = Math.max(-arenaSize, Math.min(arenaSize, position.x));
-    position.z = Math.max(-arenaSize, Math.min(arenaSize, position.z));
+  }
+  position.x = Math.max(-arenaSize, Math.min(arenaSize, position.x));
+  position.z = Math.max(-arenaSize, Math.min(arenaSize, position.z));
+}
+
+function separateEnemies() {
+  const enemies = getEnemies();
+  for (let i = 0; i < enemies.length; i++) {
+    const a = enemies[i];
+    if (!alive(a)) continue;
+    for (let j = i + 1; j < enemies.length; j++) {
+      const b = enemies[j];
+      if (!alive(b)) continue;
+      const dx = b.mesh.position.x - a.mesh.position.x;
+      const dz = b.mesh.position.z - a.mesh.position.z;
+      const dist = Math.hypot(dx, dz);
+      const minDist = (a.radius ?? enemyRadius) + (b.radius ?? enemyRadius);
+      if (dist < minDist && dist > 0.001) {
+        const push = (minDist - dist) / dist * 0.5;
+        a.mesh.position.x -= dx * push;
+        a.mesh.position.z -= dz * push;
+        b.mesh.position.x += dx * push;
+        b.mesh.position.z += dz * push;
+      }
+    }
   }
 }
 
@@ -482,6 +527,7 @@ function update(dt) {
   resolveColumnCollisions(player.group.position, playerRadius);
   updateProjectiles(dt);
   updateEnemies(dt, player.group.position);
+  separateEnemies();
 
   for (const enemy of getEnemies()) {
     if (alive(enemy)) {
