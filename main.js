@@ -13,30 +13,32 @@ import {
   archerProjectileRadius, archerProjectileDamage,
   burnDuration, earthSlowChance, earthSlowDuration,
   xpBase, xpGrowth, xpValues, levelUpChoices, upgradeOptions,
-  itemDropChance, itemDuration, abilityCooldown,
-} from './tuning.js?v=1';
-import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement, applyWaterSpeedBoost } from './player.js?v=14';
+  itemDropChance, itemDuration,
+} from './tuning.js?v=2';
+import { createPlayer, updatePlayer, updateProjectiles, getProjectiles, setElement, getElement, applyWaterSpeedBoost } from './player.js?v=15';
+import { elementMultiplier } from './matchups.js?v=1';
 import { spawnHitBurst, updateFX, clearFX } from './fx.js?v=2';
 import {
   spawnEnemyAt, updateEnemies, getEnemies, clearEnemies,
   updateEnemyProjectiles, getEnemyProjectiles, clearEnemyProjectiles,
-} from './enemies.js?v=7';
+} from './enemies.js?v=8';
 import { spawnElementFields, spawnElementFieldAt, updateElementFields, getElementFields, clearElementFields } from './elements.js?v=6';
 import { spawnItemAt, updateItems, clearItems, itemTypeFor, getItems } from './items.js?v=5';
 import { ACHIEVEMENTS, createStats, recordKill, recordFloor, checkAchievements } from './achievements.js?v=1';
 import { playHit, playDeath, playAbsorb, playLevelUp, playAchievement, playItemPickup, resumeAudio, startMusic, toggleMusic, isMusicMuted } from './audio.js?v=5';
 import { buildMap, createLightmapTexture } from './level.js?v=13';
 import {
-  triggerAbility, updateAbilities, clearAbilities, getCooldowns, getAbilityCount,
-} from './abilities.js?v=4';
+  pressSlot, releaseSlot, isCasting, getCastState, getRockWalls,
+  updateAbilities, clearAbilities, getAbilityCount,
+} from './abilities.js?v=5';
 import {
   createUI, setScore, setFloor, setWave, setHealth, setLevel, setXP,
-  setAbilityCooldown, setBuffs, setAbilityList,
+  setCastBar, setBuffs, setAbilityList,
   showGameOver, hideGameOver,
   showLevelUp, hideLevelUp,
   createEnemyHealthBar, positionEnemyHealthBar, clearEnemyHealthBars, getHealthBarCount,
   createSpawnIndicator, positionSpawnIndicator, showBanner,
-} from './ui.js?v=7';
+} from './ui.js?v=8';
 import { initDebug, updateDebug, isDebugVisible } from './debug.js?v=2';
 
 // --- Overlay -----------------------------------------------------------------
@@ -184,8 +186,9 @@ function updateWallTransparency() {
 // so player.js can look up whichever it checks for.
 const keys = new Set();
 const mouseNDC = { x: 0, y: 0 };
-const ctx = { keys, mouseNDC, camera, arenaSize, mouseDown: false };
-let abilityKeyHeld = false;
+const ctx = { keys, mouseNDC, camera, arenaSize, mouseDown: false, casting: false };
+const ABILITY_KEYS = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 };
+let invulnTimer = 0;   // seconds the golem can't be hit (air dash)
 
 const spellings = (event) => [event.code, event.key, event.key.toLowerCase(), event.code.toLowerCase()];
 
@@ -207,11 +210,10 @@ function setMouseDown(down) {
   }
 }
 
-function tryTriggerAbility() {
+// Keys 1, 2, 3 cast the held element's three abilities (no cooldowns, only cast time).
+function tryPressSlot(slot) {
   if (state !== 'playing' || !player) return;
-  const result = triggerAbility(player, scene);
-  if (result) {
-    if (player.element === 'water') applyWaterSpeedBoost();
+  if (pressSlot(player, slot)) {
     resumeAudio();
     tryStartMusic();
   }
@@ -226,11 +228,10 @@ addEventListener('keydown', (event) => {
     const muted = toggleMusic();
     ui.setMusicMuted(muted);
   }
-  if (event.code === 'KeyE' && !event.repeat && !abilityKeyHeld) {
-    abilityKeyHeld = true;
-    tryTriggerAbility();
-  }
-  if (isDebugVisible()) {
+  const slot = ABILITY_KEYS[event.code];
+  if (slot !== undefined && !event.repeat && !event.shiftKey) tryPressSlot(slot);
+  if (isDebugVisible() && event.shiftKey) {
+    // Debug: Shift+1..4 switches element.
     const debugElements = { Digit1: 'fire', Digit2: 'water', Digit3: 'earth', Digit4: 'wind' };
     if (debugElements[event.code]) {
       const el = debugElements[event.code];
@@ -243,7 +244,8 @@ addEventListener('keydown', (event) => {
 });
 addEventListener('keyup', (event) => {
   for (const token of spellings(event)) keys.delete(token);
-  if (event.code === 'KeyE') abilityKeyHeld = false;
+  const slot = ABILITY_KEYS[event.code];
+  if (slot !== undefined) releaseSlot(slot);
 });
 
 addEventListener('mousedown', (event) => {
@@ -251,14 +253,12 @@ addEventListener('mousedown', (event) => {
     setMouseDown(true);
     resumeAudio();
     tryStartMusic();
-  } else if (event.button === 2) {
-    tryTriggerAbility();
   }
 });
 addEventListener('mouseup', (event) => { if (event.button === 0) setMouseDown(false); });
 addEventListener('blur', () => {
   setMouseDown(false);
-  abilityKeyHeld = false;
+  for (const s of [0, 1, 2]) releaseSlot(s);
 });
 
 addEventListener('pointermove', (event) => {
@@ -397,8 +397,14 @@ function resolveColumnCollisions(position, radius) {
   }
 }
 
+// Level walls plus any rock walls the golem has raised.
+function allWalls() {
+  const rock = getRockWalls();
+  return rock.length ? walls.concat(rock) : walls;
+}
+
 function resolveWallCollisions(position, radius) {
-  for (const wall of walls) {
+  for (const wall of allWalls()) {
     // Closest point on the axis-aligned wall box to the circle center.
     const closestX = Math.max(wall.x - wall.halfW, Math.min(position.x, wall.x + wall.halfW));
     const closestZ = Math.max(wall.z - wall.halfD, Math.min(position.z, wall.z + wall.halfD));
@@ -510,8 +516,9 @@ function absorbFields() {
 }
 
 // --- Collision (ours, not the other builder's) --------------------------------
-function projectileHitsWall(position, radius) {
-  for (const wall of walls) {
+// The golem's own shots pass through its rock walls; enemy shots and abilities do not.
+function projectileHitsWall(position, radius, includeRock = true) {
+  for (const wall of includeRock ? allWalls() : walls) {
     const closestX = Math.max(wall.x - wall.halfW, Math.min(position.x, wall.x + wall.halfW));
     const closestZ = Math.max(wall.z - wall.halfD, Math.min(position.z, wall.z + wall.halfD));
     const dx = position.x - closestX;
@@ -529,7 +536,7 @@ function projectileHitsWall(position, radius) {
 function blockProjectiles() {
   for (const shot of getProjectiles()) {
     if (!alive(shot)) continue;
-    if (projectileHitsWall(shot.mesh.position, projectileRadius)) {
+    if (projectileHitsWall(shot.mesh.position, projectileRadius, false)) {
       shot.alive = false;
       if (shot.mesh) scene.remove(shot.mesh);
       spawnHitBurst(scene, shot.mesh.position.clone(), elementColors[player.element] ?? '#f2f2f2');
@@ -631,9 +638,10 @@ function levelUp() {
   });
 }
 
-function damageEnemy(enemy, damage) {
+// All damage to enemies goes through the element matchups.
+function damageEnemy(enemy, damage, element = player.element) {
   if (!alive(enemy)) return;
-  enemy.hp -= damage;
+  enemy.hp -= damage * elementMultiplier(element, enemy.element);
   ensureHealthBar(enemy);
   if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemy.maxHp ?? enemyHP);
   if (enemy.hp <= 0) {
@@ -649,7 +657,7 @@ function hitEnemies() {
       if (!alive(enemy)) continue;
       const reach = projectileRadius + (enemy.radius ?? enemyRadius);
       if (distanceXZ(shot.mesh.position, enemy.mesh.position) < reach) {
-        enemy.hp -= shot.damage ?? projectileDamage;
+        enemy.hp -= (shot.damage ?? projectileDamage) * elementMultiplier(shot.element ?? player.element, enemy.element);
         ensureHealthBar(enemy);
         if (enemy.healthBar) enemy.healthBar.setHp(enemy.hp, enemy.maxHp ?? enemyHP);
 
@@ -683,7 +691,8 @@ function hitPlayer() {
     if (!alive(shot)) continue;
     const radius = shot.radius ?? archerProjectileRadius;
     if (distanceXZ(shot.mesh.position, playerPos) < radius + playerRadius) {
-      player.hp -= shot.damage ?? archerProjectileDamage;
+      if (invulnTimer > 0) continue;   // air dash: shots pass through
+      player.hp -= (shot.damage ?? archerProjectileDamage) * elementMultiplier(shot.element, player.element);
       shot.alive = false;
       if (shot.mesh.parent) shot.mesh.parent.remove(shot.mesh);
       screenShake += screenShakeAmount * 0.5;
@@ -710,8 +719,8 @@ function touchDamage(dt) {
       enemy.mesh.position.x -= nx * overlap;
       enemy.mesh.position.z -= nz * overlap;
 
-      if (contactTimer <= 0) {
-        player.hp -= contactDamage;
+      if (contactTimer <= 0 && invulnTimer <= 0) {
+        player.hp -= contactDamage * elementMultiplier(enemy.element, player.element);
         contactTimer = contactCooldown;
         // Knock back both the golem and the enemy on contact.
         player.group.position.x = Math.max(-arenaSize, Math.min(arenaSize, player.group.position.x + nx * contactPushDistance));
@@ -754,6 +763,8 @@ function updateCamera(dt) {
 
 // --- Frame -------------------------------------------------------------------
 function update(dt) {
+  ctx.casting = isCasting();
+  invulnTimer = Math.max(0, invulnTimer - dt);
   updatePlayer(player, dt, ctx);
   resolveColumnCollisions(player.group.position, playerRadius);
   resolveWallCollisions(player.group.position, playerRadius);
@@ -796,9 +807,8 @@ function update(dt) {
     }
   }
 
-  // HUD: ability cooldown and active item buffs.
-  const cds = getCooldowns();
-  setAbilityCooldown(cds[player.element], abilityCooldown[player.element]);
+  // HUD: cast bar and active item buffs.
+  setCastBar(getCastState());
   const activeBuffList = [];
   const buffLabels = { damage: 'Might', speed: 'Swiftness', fireRate: 'Alacrity' };
   for (const key of Object.keys(itemBuffs)) {
@@ -808,17 +818,21 @@ function update(dt) {
   }
   setBuffs(activeBuffList);
 
-  // Alternate-fire abilities.
-  const abilityEvents = updateAbilities(dt, getEnemies(), scene);
+  // Element abilities (keys 1, 2, 3).
+  const abilityEvents = updateAbilities(dt, player, getEnemies(), scene, { hitsWall: projectileHitsWall });
   for (const ev of abilityEvents) {
     if (ev.type === 'damage') {
-      damageEnemy(ev.enemy, ev.damage);
       if (ev.applyBurn) ev.enemy.burnTimer = burnDuration;
       if (ev.applySlow) ev.enemy.slowTimer = earthSlowDuration;
-    } else if (ev.type === 'knockback') {
-      if (alive(ev.enemy)) {
-        ev.enemy.mesh.position.addScaledVector(ev.dir, ev.amount * dt);
-      }
+      damageEnemy(ev.enemy, ev.damage * player.upgrades.damage * player.buffs.damage, ev.element);
+    } else if (ev.type === 'movePlayer') {
+      player.group.position.add(ev.delta);
+      resolveColumnCollisions(player.group.position, playerRadius);
+      resolveWallCollisions(player.group.position, playerRadius);
+    } else if (ev.type === 'speedBoost') {
+      applyWaterSpeedBoost();
+    } else if (ev.type === 'invuln') {
+      invulnTimer = Math.max(invulnTimer, ev.time);
     } else if (ev.type === 'burst') {
       spawnHitBurst(scene, ev.position, ev.color);
     } else if (ev.type === 'shake') {

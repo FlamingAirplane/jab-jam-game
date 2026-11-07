@@ -16,7 +16,7 @@ import {
   burnDamagePerSecond, burnDuration,
   earthSlowMul, earthSlowDuration,
   elementColors,
-} from './tuning.js?v=1';
+} from './tuning.js?v=2';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const BRAWLER_COLOR = '#4a4a4a';
@@ -229,6 +229,7 @@ function spawnEnemyProjectile(position, direction, {
   radius = archerProjectileRadius,
   range = archerProjectileRange,
   color = '#f2a65a',
+  element = null,
 } = {}) {
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(radius, 10, 8),
@@ -246,11 +247,13 @@ function spawnEnemyProjectile(position, direction, {
     damage,
     radius,
     range,
+    element,
   });
 }
 
-function spawnMageProjectile(position, direction, color = '#9b59b6') {
+function spawnMageProjectile(position, direction, color = '#9b59b6', element = null) {
   spawnEnemyProjectile(position, direction, {
+    element,
     speed: mageProjectileSpeed,
     damage: mageProjectileDamage,
     radius: mageProjectileRadius,
@@ -431,9 +434,9 @@ export function updateEnemies(dt, targetPos) {
           const dir = new THREE.Vector3(dx / distance, 0, dz / distance);
           const projectileColor = elementColors[enemy.element] ?? '#f2a65a';
           if (isMage) {
-            spawnMageProjectile(origin, dir, projectileColor);
+            spawnMageProjectile(origin, dir, projectileColor, enemy.element);
           } else {
-            spawnEnemyProjectile(origin, dir, { color: projectileColor });
+            spawnEnemyProjectile(origin, dir, { color: projectileColor, element: enemy.element });
           }
           enemy.fireTimer = 1 / fireRate + Math.random() * 0.2;
         }

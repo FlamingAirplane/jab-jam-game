@@ -3,7 +3,7 @@ import {
   enemyHealthBarWidth, enemyHealthBarHeight, enemyHealthBarYOffset,
   enemyHealthBarColor, enemyHealthBarBg,
   spawnIndicatorSize, spawnIndicatorColor, elementColors,
-} from './tuning.js?v=1';
+} from './tuning.js?v=2';
 
 const GREY = { dark: '#1a1a1a', mid: '#3a3a3a', light: '#5c5c5c', pale: '#999999', white: '#d4d4d4', blood: '#8b0000' };
 
@@ -123,14 +123,14 @@ export function createUI() {
 
   const abilityLabel = document.createElement('div');
   Object.assign(abilityLabel.style, { marginTop: '6px', fontSize: '12px', color: GREY.light });
-  abilityLabel.textContent = 'Alt-fire (E / RMB)';
+  abilityLabel.textContent = 'Abilities: 1 / 2 / 3';
   panel.append(abilityLabel);
   const abilityOuter = document.createElement('div');
   Object.assign(abilityOuter.style, {
     marginTop: '2px', height: '6px', background: GREY.dark, border: `1px solid ${GREY.mid}`,
   });
   const abilityBar = document.createElement('div');
-  Object.assign(abilityBar.style, { height: '100%', width: '100%', background: '#3498db' });
+  Object.assign(abilityBar.style, { height: '100%', width: '0%', background: '#3498db' });
   abilityOuter.appendChild(abilityBar);
   panel.append(abilityOuter);
 
@@ -180,7 +180,7 @@ export function createUI() {
   levelup.appendChild(levelupBox);
   root.append(levelup);
 
-  els = { score, floor, wave, hpText, hpBar, over, overStats, music, level, xpBar, abilityBar, buffs, abilityTitle, abilityList, banner, bannerTitle, bannerSub, levelup, levelupButtons };
+  els = { score, floor, wave, hpText, hpBar, over, overStats, music, level, xpBar, abilityBar, abilityLabel, buffs, abilityTitle, abilityList, banner, bannerTitle, bannerSub, levelup, levelupButtons };
   setScore(0);
   setFloor(1);
   setWave(1, 1);
@@ -247,10 +247,21 @@ export function setXP(xp, xpToNext) {
   els.xpBar.style.width = `${ratio * 100}%`;
 }
 
-export function setAbilityCooldown(remaining, total) {
+// Cast bar: fills while an ability is being cast. state = { name, progress, element } or null.
+let lastCastKey = '';
+export function setCastBar(state) {
   if (!els) return;
-  const ratio = total > 0 ? Math.max(0, Math.min(1, 1 - remaining / total)) : 1;
-  els.abilityBar.style.width = `${ratio * 100}%`;
+  const key = state ? `${state.name}|${Math.round(state.progress * 50)}` : '';
+  if (key === lastCastKey) return;
+  lastCastKey = key;
+  if (!state) {
+    els.abilityLabel.textContent = 'Abilities: 1 / 2 / 3';
+    els.abilityBar.style.width = '0%';
+    return;
+  }
+  els.abilityLabel.textContent = `Casting: ${state.name}`;
+  els.abilityBar.style.background = elementColors[state.element] ?? '#3498db';
+  els.abilityBar.style.width = `${Math.max(0, Math.min(1, state.progress)) * 100}%`;
 }
 
 export function setBuffs(active) {
@@ -264,31 +275,39 @@ export function setBuffs(active) {
 
 const ABILITY_COPY = {
   fire: {
-    title: 'FIRE',
+    title: 'FIRE — every move burns · beats wind',
     lines: [
-      'LMB — Flame blast: single shot, applies burn',
-      'E / RMB — Flame grenade: explodes for AoE burn',
+      'LMB — Fireball',
+      '1 — Flame blast: big burning shot',
+      '2 — Flame grenade: explodes for AoE burn',
+      '3 — Flame charge: dash through enemies in flame',
     ],
   },
   water: {
-    title: 'WATER',
+    title: 'WATER — every move builds speed · beats fire',
     lines: [
-      'LMB — Piercing beam: passes through enemies',
-      'E / RMB — Tidal wave: wide knockback pulse',
+      'LMB — Piercing water orb',
+      '1 — Water grab: hold to grab, release to throw',
+      '2 — Tidal wave: wide wave that pushes',
+      '3 — Swamp: slows enemies around you',
     ],
   },
   earth: {
-    title: 'EARTH',
+    title: 'EARTH — moves may slow · beats fire',
     lines: [
-      'LMB — Heavy blast: chance to slow',
-      'E / RMB — Earthquake: expanding slow + knockback',
+      'LMB — Heavy blast',
+      '1 — Earthquake: shockwave around you',
+      '2 — Rock wall: temporary wall at the mouse',
+      '3 — Boulder throw: heavy ranged rock',
     ],
   },
   wind: {
-    title: 'WIND',
+    title: 'WIND — speed and space · beats earth, water',
     lines: [
-      'LMB — Piercing dart: fast, cuts through enemies',
-      'E / RMB — Gust: narrow knockback stream',
+      'LMB — Piercing wind slash',
+      '1 — Gale burst: blow enemies away',
+      '2 — Air dash: dodge, leave an air current',
+      '3 — Vacuum orb: pull enemies together',
     ],
   },
 };

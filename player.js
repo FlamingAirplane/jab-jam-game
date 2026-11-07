@@ -25,11 +25,12 @@ import {
   arrowTurnSpeed,
   waterSpeedBoostMul,
   waterSpeedBoostDuration,
-} from './tuning.js?v=1';
+} from './tuning.js?v=2';
 import { spawnMuzzleFlash, spawnProjectileTrailDot, clearFX } from './fx.js?v=2';
 import { playShoot } from './audio.js?v=2';
 import { createFireball, updateFireball } from './fireball.js?v=1';
 import { createWaterOrb, updateWaterOrb } from './waterorb.js?v=1';
+import { createWindSlash, updateWindSlash } from './windslash.js?v=1';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const GOLEM_COLOR = '#8e9196';
@@ -159,6 +160,8 @@ export function createPlayer(scene) {
     dead: false,
     element: null,
     facing: new THREE.Vector3(0, 0, 1), // where the next shot goes
+    aimPoint: new THREE.Vector3(0, 0, 5), // where the mouse points on the floor (rock wall)
+    moveDir: new THREE.Vector3(), // which way WASD is pushing (air dash)
     upgrades: { damage: 1, speed: 1, maxHp: 1, fireRate: 1 },
     buffs: { damage: 1, speed: 1, fireRate: 1 },
   };
@@ -224,7 +227,9 @@ export function updatePlayer(player, dt, ctx) {
     speedMul = waterSpeedBoostMul;
   }
 
+  player.moveDir.copy(moveStep);
   if (moveStep.lengthSq() > 0) {
+    player.moveDir.normalize();
     moveStep.normalize().multiplyScalar(moveSpeed * elementMoveSpeedMul[player.element] * speedMul * player.upgrades.speed * player.buffs.speed * dt);
     position.x = clamp(position.x + moveStep.x, -arenaSize, arenaSize);
     position.z = clamp(position.z + moveStep.z, -arenaSize, arenaSize);
@@ -240,6 +245,7 @@ export function updatePlayer(player, dt, ctx) {
   } else {
     raycaster.setFromCamera(ctx.mouseNDC, ctx.camera);
     if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+      player.aimPoint.copy(hitPoint);
       const dx = hitPoint.x - position.x;
       const dz = hitPoint.z - position.z;
       if (dx !== 0 || dz !== 0) {
@@ -253,7 +259,8 @@ export function updatePlayer(player, dt, ctx) {
 
   // Fire: one shot per cooldown while the button or Space is held.
   fireTimer = Math.max(0, fireTimer - dt);
-  if (firing(ctx) && fireTimer === 0) {
+  // No basic shots while an ability is being cast.
+  if (firing(ctx) && fireTimer === 0 && !ctx.casting) {
     spawnShot(player);
     fireTimer = 1 / (fireRate * elementFireRateMul[player.element] * player.upgrades.fireRate * player.buffs.fireRate);
   }
@@ -277,6 +284,7 @@ export function updateProjectiles(dt) {
 
     if (shot.fireball) updateFireball(shot.fireball, dt);
     if (shot.waterOrb) updateWaterOrb(shot.waterOrb, dt);
+    if (shot.windSlash) updateWindSlash(shot.windSlash, dt);
 
     shot.trailTimer += dt;
     if (shot.trailTimer >= trailSpawnInterval) {
@@ -305,6 +313,7 @@ function spawnShot(player) {
   let pierce;
   let fireball = null;
   let waterOrb = null;
+  let windSlash = null;
 
   if (element === 'water') {
     // Looping sprite-sheet water orb.
@@ -320,9 +329,10 @@ function spawnShot(player) {
     speed = earthProjectileSpeed;
     damage = projectileDamage * 1.5 * player.upgrades.damage;
   } else if (element === 'wind') {
-    // Fast, thin, piercing dart.
-    mesh = new THREE.Mesh(projectileGeometry, material);
-    mesh.scale.set(0.35, 0.35, 2.2);
+    // Looping sprite-sheet crescent wind slash.
+    windSlash = createWindSlash(shotScene, 1.4);
+    mesh = windSlash.sprite;
+    mesh.material.color = new THREE.Color(elementColors.wind);
     speed = windProjectileSpeed;
     pierce = windPierceCount;
   } else {
@@ -354,6 +364,7 @@ function spawnShot(player) {
     element,
     fireball: element === 'fire' ? fireball : undefined,
     waterOrb: element === 'water' ? waterOrb : undefined,
+    windSlash: element === 'wind' ? windSlash : undefined,
   });
 }
 

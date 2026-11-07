@@ -136,8 +136,7 @@ export const elementRotationSpeedMul = {
   wind: 1.5,     // agile
 };
 
-// Alternate-fire abilities (one per element)
-export const abilityCooldown = { fire: 5, water: 5, earth: 6, wind: 5 }; // seconds
+// Ability numbers reused by the 1/2/3 abilities (grenade, tidal wave, earthquake)
 export const fireGrenadeSpeed = 12;
 export const fireGrenadeFuse = 1.2;         // seconds until explosion if it doesn't hit first
 export const fireGrenadeBlastRadius = 6;
@@ -210,3 +209,82 @@ export const upgradeOptions = [
 // Item drops
 export const itemDropChance = 0.05;      // chance an enemy drops an item on death
 export const itemDuration = 10;          // seconds temporary buffs last
+
+// --- Element matchups (from the game design doc) ---------------------------------
+// Attacker element -> elements it beats. A hit that beats the defender does elementAdvantageMul.
+export const elementBeats = {
+  water: ['fire'],
+  fire: ['wind'],
+  earth: ['fire'],
+  wind: ['earth', 'water'],
+  light: ['darkness'],
+};
+export const elementAdvantageMul = 1.25;   // +25% when your element beats theirs
+export const lightBaseMul = 0.9;           // light is a little weaker against everything...
+export const lightVsDarknessMul = 1.5;     // ...except darkness (+50% damage taken)
+export const darknessBaseMul = 1.1;        // darkness is +10% against everything...
+export const darknessVsLightMul = 0.5;     // ...except light, where it is very weak
+
+// --- Element abilities: keys 1, 2, 3. No cooldowns, only cast time (seconds) -------
+export const abilityCastTime = {
+  fire: [0.2, 0.35, 0.3],    // flame blast, flame grenade, flame charge
+  water: [0.15, 0.4, 0.35],  // water grab, tidal wave, swamp
+  earth: [0.5, 0.35, 0.4],   // earthquake, rock wall, boulder throw
+  wind: [0.15, 0.1, 0.3],    // gale burst, air dash, vacuum orb
+};
+export const abilityPushSpeed = 25;        // metres per second enemies slide when shoved
+
+// Fire
+export const flameBlastSpeed = 30;
+export const flameBlastDamage = 45;
+export const flameBlastRadius = 0.8;
+export const flameBlastRange = 40;
+export const flameChargeDistance = 9;
+export const flameChargeDuration = 0.25;
+export const flameChargeHitRadius = 2.4;
+export const flameChargeDamage = 30;
+export const flameChargePush = 4;
+
+// Water
+export const waterGrabRange = 7;           // how far in front the grab reaches
+export const waterGrabHoldDistance = 2.4;  // where the held enemy floats
+export const waterGrabMaxHold = 3;         // seconds before it launches on its own
+export const waterThrowSpeed = 30;
+export const waterThrowRange = 25;
+export const waterThrowBlastRadius = 4.5;
+export const waterThrowDamage = 35;
+export const waterThrowPush = 5;
+export const swampRadius = 7;
+export const swampDuration = 4;
+
+// Earth
+export const rockWallLength = 7;
+export const rockWallThickness = 1.2;
+export const rockWallHeight = 3;
+export const rockWallDuration = 5;
+export const rockWallMaxRange = 18;        // furthest from the golem the wall can appear
+export const boulderSpeed = 22;
+export const boulderDamage = 55;
+export const boulderRadius = 1.0;
+export const boulderRange = 35;
+export const boulderPush = 2;
+
+// Wind
+export const galeRadius = 7;
+export const galeDamage = 10;
+export const galePush = 6;
+export const airDashDistance = 8;
+export const airDashDuration = 0.15;
+export const airDashInvuln = 0.3;          // seconds the golem can't be hit
+export const airCurrentDuration = 2.5;
+export const airCurrentWidth = 2.5;
+export const airCurrentDamage = 8;
+export const airCurrentPush = 3;
+export const vacuumSpeed = 16;
+export const vacuumTravel = 14;
+export const vacuumPullRadius = 9;
+export const vacuumPullSpeed = 8;
+export const vacuumDuration = 2;
+export const vacuumTickDamage = 6;
+export const vacuumTickInterval = 0.5;
+export const vacuumPopDamage = 15;

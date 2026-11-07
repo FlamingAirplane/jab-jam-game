@@ -1,6 +1,6 @@
 // Element fields: glowing patches on the floor that change the golem's element when walked over.
 import * as THREE from 'three';
-import { elementTypes, elementColors, elementFieldRadius, arenaSize } from './tuning.js?v=1';
+import { elementTypes, elementColors, elementFieldRadius, arenaSize } from './tuning.js?v=2';
 
 const fields = [];
 
