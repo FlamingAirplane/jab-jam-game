@@ -18,8 +18,28 @@ Add one row per use (newest first). Leave blank cells as `—` if they do not ap
 
 You can delete this section once you understand the format. Do not copy these rows into your log.
 
-| Time | Tool / model | What you asked (prompt or short summary) | What came back | Kept, changed, or rejected (why) | Game asset? |
-|------|--------------|------------------------------------------|----------------|-----------------------------------|-------------|
-| 1:05 | Image generator (ChatGPT) | Pixel sky background, purple sunset, 512 px wide | One PNG, too pink | Rejected; used a code gradient instead | No |
-| 1:40 | Claude Code (Opus), build terminal | Make the cube jump on space with a little squash | Jump in `main.js` | Kept; tuned jump height after playtest | No (code only) |
-| 3:10 | Meshy | Low poly tree, GLB | GLB, scale wrong | Kept after resize; checked license allows game use | Yes: `assets/tree.glb`. Meshy terms (note which tier you used) |
+┌───────┬──────────────────────────┬───────────────────────────────────────────┬────────────────────────────────────────────────────────────┬────────────────────────────────┬───────────────────────┐
+│ Time  │       Tool / model       │ What you asked (prompt or short summary)  │                       What came back                       │  Kept, changed, or rejected    │      Game asset?      │
+│       │                          │                                           │                                                            │             (why)              │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 11:30 │ Claude Code (jam-guide), │ Plan the game: card, world, character,    │ Drafted context/ kit and BUILD-PLAN.md                     │ Kept after team edits and      │ No                    │
+│       │  build terminal          │ twist, context kit, build plan            │                                                            │ approval (AJ, BD, JM)          │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 13:00 │ Claude Code (jam-lead),  │ Build M1–M3 core loop: movement, aim,     │ main.js, player.js, enemies.js, elements.js, fx.js, ui.js, │ Kept; tuned numbers in         │ No                    │
+│       │ build terminal           │ fire, waves, elements, collision          │  tuning.js                                                 │ tuning.js after play           │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 14:30 │ Claude Code (jam-lead),  │ Add M4 visuals: mosaic floor,             │ Runtime canvas mosaic texture, blocky golem, pyramid       │ Kept; later upgraded golem     │ Floor texture no;     │
+│       │ build terminal           │ golem/enemy/field models, sounds          │ enemies, rune fields, generated Web Audio sounds           │ model                          │ sounds no             │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 15:00 │ Claude Code (jam-lead),  │ Headless Blender export for golem model   │ assets/make_golem.py and assets/golem.glb                  │ Kept after rotating and        │ Yes: assets/golem.glb │
+│       │ build terminal           │                                           │                                                            │ floor-aligning the model       │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 15:20 │ Claude Code (jam-lead),  │ Add element variant parts to the golem    │ One Blender model with fire_, water_, earth_ parts toggled │ Kept                           │ Yes: assets/golem.glb │
+│       │ build terminal           │ model                                     │  in code                                                   │                                │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 15:30 │ Claude Code (jam-lead),  │ Add walls, columns, enemy separation,     │ Internal walls, more columns, enemy-enemy separation, 10   │ Kept                           │ No                    │
+│       │ build terminal           │ same-element healing                      │ HP heal on matching element                                │                                │                       │
+├───────┼──────────────────────────┼───────────────────────────────────────────┼────────────────────────────────────────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ 15:40 │ Claude Code (jam-lead),  │ Add brawler and archer enemy roles        │ enemies.js with melee brawlers and ranged archers          │ Kept                           │ No                    │
+│       │ build terminal           │                                           │                                                            │                                │                       │
+└───────┴──────────────────────────┴───────────────────────────────────────────┴────────────────────────────────────────────────────────────┴────────────────────────────────┴───────────────────────┘
