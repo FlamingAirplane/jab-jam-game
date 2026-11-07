@@ -82,7 +82,7 @@ const floorMesh = new THREE.Mesh(
 floorMesh.rotation.x = -Math.PI / 2;
 scene.add(floorMesh);
 
-new THREE.TextureLoader().load('assets/L_Floor.png?v=1', (texture) => {
+new THREE.TextureLoader().load('assets/L_Floor2.jpeg?v=1', (texture) => {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(8, 8);
