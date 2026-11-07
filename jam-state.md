@@ -8,4 +8,4 @@ Written by `/jam-start`, `/jam-plan`, the build terminal, and `/jam-ship`. Read 
 - Phase: shipped
 - Card: 3. Single-screen shooter (aim and fire)
 - Repo URL: https://github.com/FlamingAirplane/jab-jam-game
-- Gallery PR: https://github.com/SchoolofCreativeTechnology/jam-gallery/pull/8
+- Gallery PR: https://github.com/SchoolofCreativeTechnology/jam-gallery/pull/23
