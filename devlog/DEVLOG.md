@@ -26,6 +26,12 @@ Format for each playtest (after M2 and after M3):
 - **Bored or stuck:**
 - **What we'll change (who decided):**
 
+### 2026-11-07 (post-jam): Element matchups and three abilities per element
+- **Changed:** Following our game design doc, the golem now has three abilities per element on keys 1, 2, 3, with no cooldowns, only cast time (a cast bar fills; no basic shots while casting). Fire: flame blast, flame grenade, flame charge. Water: water grab (hold, release to throw), tidal wave, swamp. Earth: earthquake, rock wall, boulder throw. Wind: gale burst, air dash, vacuum orb. Element matchups now change damage both ways: +25% when your element beats theirs (water beats fire, fire beats wind, earth beats fire, wind beats earth and water). E / right-click alt-fire is gone. Commit `63cf59b`, which also shipped our wind-slash projectile.
+- **Expected:** *(team to fill in before playing)*
+- **Saw:** *(team to fill in after playing)*. So far only checked by Claude: every ability casts in the browser with no errors. Not yet checked: water grab catching and throwing an enemy, and the exact matchup damage.
+- **Decided, and why (who):** We wrote the design doc and told Claude to follow it. We decided rock wall "will create a temp wall where the mouse is on screen." Darkness against light was set to 0.5× as a placeholder because our doc gives no number; it's in `tuning.js` (`darknessVsLightMul`) for us to decide.
+
 ## Reflection
 
 Reflection

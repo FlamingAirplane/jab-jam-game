@@ -12,7 +12,8 @@ Add one row per use (newest first). Leave blank cells as `—` if they do not ap
 
 | Time | Tool / model | What you asked (prompt or short summary) | What came back | Kept, changed, or rejected (why) | Game asset? |
 |------|--------------|------------------------------------------|----------------|-----------------------------------|-------------|
-| | | | | | |
+| Nov 7 | Claude Code (Opus), build session | Follow our game design doc: element matchups and three abilities per element on keys 1/2/3; rock wall at the mouse | `abilities.js` rewritten, new `matchups.js`, edits to `main.js`, `player.js`, `enemies.js`, `ui.js`, `tuning.js` (commit `63cf59b`) | Kept; not yet playtested by us | No (code only) |
+| Nov 7 | Claude Code (Opus), build session | Make a game design document from our slide deck and `context/references/` | A design doc (Claude Doc) covering overview, core loop, mechanics, world, art, scope, open questions | Changed: we edited it in Google Docs, filled in wind/light/darkness abilities, colours, the 1.25× matchup bonus, localStorage saves, rock wall placement | No |
 
 ## Worked example
 
